@@ -1,0 +1,378 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0a111b"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="MTC Coach"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" type="image/png" href="icons/icon-192.png"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><style>:root{color-scheme:dark;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>MTC Coach-Dashboard</title>
+<style>
+@font-face{font-family:"Chakra Petch";font-style:normal;font-weight:600;font-display:swap;src:url(fonts/chakra-petch-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Chakra Petch";font-style:normal;font-weight:700;font-display:swap;src:url(fonts/chakra-petch-latin-700-normal.woff2) format("woff2")}
+/* Layout: Coach-Übersicht (Karten-Raster) → Detailansicht pro Kunde; gleiche Navy/Violett-Marke wie die App */
+:root{
+  --bg:#060A1C; --surface:rgba(16,24,58,.72); --surface-solid:#0E1638; --surface-2:#18214D; --field:#0A1130;
+  --fg:#EEF0FF; --muted:#8C94C2; --line:#232D5E; --line-hi:rgba(139,92,255,.35);
+  --brand:#4A00E2; --accent:#8B5CFF; --glow:rgba(74,0,226,.55);
+  --p:#FF5C8A; --c:#FFC247; --f:#3DD6F5; --ok:#4BE3A0; --warn:#FFC247; --bad:#FF6B6B; --off:#3A4470;
+  --font-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --font-body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.45;padding:0 16px;
+  background:radial-gradient(900px 520px at 85% -120px,rgba(74,0,226,.38),transparent 70%),
+  linear-gradient(rgba(139,92,255,.045) 1px,transparent 1px) 0 0/32px 32px,
+  linear-gradient(90deg,rgba(139,92,255,.045) 1px,transparent 1px) 0 0/32px 32px,var(--bg);background-attachment:fixed}
+.wrap{max-width:1040px;margin:0 auto;padding-block:14px 60px;display:flex;flex-direction:column;gap:16px}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.top img{height:38px;filter:drop-shadow(0 0 10px rgba(123,60,255,.75))}
+.brand{font-family:var(--font-display);font-weight:700;font-size:30px;letter-spacing:.08em;background:linear-gradient(100deg,#fff 10%,#B69BFF 55%,#7B3CFF);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:13px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+h1,h2,h3{font-family:var(--font-display);margin:0;letter-spacing:.04em}
+h1{font-size:30px;text-transform:uppercase}
+h2{font-size:24px}
+h3{font-size:19px}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.btn{border:1px solid var(--line);background:var(--surface-2);padding:9px 14px;border-radius:10px;font-weight:600;font-size:14px}
+.btn:hover{border-color:var(--line-hi)}
+.btn.primary{background:linear-gradient(135deg,var(--brand),#6A2BFF);border-color:transparent;color:#fff;box-shadow:0 0 22px var(--glow)}
+.btn.ghost{background:transparent;border-color:transparent}
+.btn.danger{background:transparent;color:var(--bad);border-color:rgba(255,107,107,.4)}
+.input{border:1px solid var(--line);background:var(--field);border-radius:10px;padding:9px 11px;min-width:0;flex:1}
+.input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(74,0,226,.22)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600}
+.seg button[aria-pressed="true"]{background:linear-gradient(135deg,var(--brand),#6A2BFF);color:#fff;border-color:transparent;box-shadow:0 0 14px var(--glow)}
+.pill{font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.pill i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.st-ok{background:rgba(75,227,160,.14);color:var(--ok)}.st-ok i{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.st-warn{background:rgba(255,194,71,.14);color:var(--warn)}.st-warn i{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.st-bad{background:rgba(255,107,107,.14);color:var(--bad)}.st-bad i{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+.st-old{background:rgba(255,255,255,.06);color:var(--muted)}.st-old i{background:var(--muted)}
+.summary-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.summary-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi small{color:var(--muted);font-size:12px}
+.kpi b{font-family:var(--font-display);font-size:30px;line-height:1.05;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:760px){.grid{grid-template-columns:1fr}}
+.client{display:flex;flex-direction:column;gap:10px;text-align:left;width:100%;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.client:hover{border-color:var(--line-hi);box-shadow:0 0 0 1px rgba(74,0,226,.2),0 14px 40px rgba(74,0,226,.18)}
+.client-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.client-head h3{overflow-wrap:anywhere}
+.mets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.met small{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.met b{font-family:var(--font-display);font-size:22px;font-variant-numeric:tabular-nums}
+.chart{overflow-x:auto}
+.chart svg{display:block;width:100%;height:auto}
+.chart text{font-family:var(--font-body);font-size:11px;fill:var(--muted)}
+.macro{display:flex;flex-direction:column;gap:12px}
+.mrow{display:grid;grid-template-columns:160px 1fr 90px;gap:10px;align-items:center}
+@media (max-width:520px){.mrow{grid-template-columns:132px 1fr 64px;font-size:14px}}
+.mtrack{position:relative;height:12px;border-radius:7px;background:rgba(255,255,255,.06)}
+.mtrack i{position:absolute;left:0;top:0;bottom:0;border-radius:7px}
+.mtrack u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--fg);opacity:.7}
+.mrow b{font-family:var(--font-display);font-size:18px;text-align:right;font-variant-numeric:tabular-nums}
+.cal{display:grid;grid-template-columns:auto repeat(7,minmax(0,1fr));gap:5px;align-items:center;max-width:460px}
+.cal .h{font-size:11px;color:var(--muted);text-align:center}
+.cal .w{font-size:11px;color:var(--muted);padding-right:6px;white-space:nowrap}
+.cell{aspect-ratio:1;border-radius:7px;background:rgba(255,255,255,.04);border:1px solid var(--line);display:grid;place-items:center;font-size:11px;color:var(--muted)}
+.cell.in{background:linear-gradient(135deg,var(--brand),#7B3CFF);border-color:transparent;color:#fff;box-shadow:0 0 10px var(--glow)}
+.cell.off{background:rgba(255,194,71,.28);border-color:rgba(255,194,71,.5);color:#fff}
+.cell.water{background:rgba(77,163,255,.12)}
+.cell.future{opacity:.25}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:4px;display:inline-block}
+.empty{text-align:center;padding:36px 16px;display:flex;flex-direction:column;gap:10px;align-items:center}
+.empty .big{font-size:44px}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--surface-solid);border:1px solid var(--line-hi);color:var(--fg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;box-shadow:0 0 30px rgba(74,0,226,.35);max-width:calc(100vw - 32px);z-index:9}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.note{font-size:12px;color:var(--muted)}
+/* Apple-inspirierte Ebene (wie die App) */
+body{font-size:16px;-webkit-font-smoothing:antialiased;background:radial-gradient(800px 420px at 80% -160px,rgba(74,0,226,.30),transparent 70%),var(--bg);background-attachment:fixed}
+.card,.kpi{background:#0E1638;border:1px solid rgba(255,255,255,.07);border-radius:18px;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+h1{font-family:var(--font-body);text-transform:none;font-size:32px;font-weight:750;letter-spacing:-.025em}
+h2,h3{font-family:var(--font-body);letter-spacing:-.01em}
+h3{font-size:17px;font-weight:650}
+.kpi b,.met b,.mrow b{font-family:var(--font-body);letter-spacing:-.02em}
+.seg{background:#141D45;padding:3px;border-radius:11px;gap:2px}
+.seg button{border:0;background:transparent;border-radius:9px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:#2B2F75;color:#fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.btn{min-height:44px;border-radius:12px}
+.btn.primary{background:var(--brand);box-shadow:0 6px 20px rgba(74,0,226,.35)}
+.client:hover{border-color:var(--line-hi);box-shadow:0 10px 30px rgba(74,0,226,.16)}
+.client.has-alert{border-color:rgba(255,107,107,.55)}
+.flags{display:grid;gap:4px}
+.flag{display:flex;align-items:center;gap:8px;font-size:13.5px}
+.flag i{width:8px;height:8px;border-radius:50%;flex:none;background:var(--warn)}
+.flag.alert i{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+.flag.alert{color:#FFB3B3}
+.ci-note{margin:0;padding:10px 12px;border-left:3px solid var(--accent);background:#141D45;border-radius:10px;font-size:14.5px;white-space:pre-wrap}
+.input{font-size:16px}
+.tdee div{display:flex;flex-direction:column;gap:2px}
+.tdee small{color:var(--muted);font-size:12px}
+.tdee b{font-family:var(--font-display);font-size:34px;background:linear-gradient(100deg,#fff,#B69BFF);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tdee span{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ================= Muskelatlas-Look (wie die App v9) ================= */
+:root{--stage:#04070c;--bg:#0a111b;--card:#0f1926;--fill:#172434;--ink:#dbe8f5;--ink-2:#8199b1;--hair:#1c2b3d;--holo:#5fe1ff;--accent:#b57bff;--accent-ink:#0a0612;--accent-soft:rgba(181,123,255,.14);--alert:#ff7a85;
+  --fg:var(--ink);--muted:var(--ink-2);--line:var(--hair);--line-hi:rgba(181,123,255,.45);--brand:var(--accent);--p:#b57bff;--c:#ffc861;--f:#5fe1ff;--ok:#5fe1ff;--warn:#ffc861;--bad:#ff7a85;--off:#1c2b3d;--surface:var(--card);--surface-2:var(--fill);--field:var(--fill)}
+html{background:var(--stage)}
+body{background:radial-gradient(ellipse 70% 40% at 60% 0%,#141a2b 0%,var(--stage) 70%) fixed,var(--stage);color:var(--ink)}
+.wrap{max-width:1280px}
+.top{position:sticky;top:0;z-index:5;margin:0 -16px;padding:10px 16px;background:rgba(4,7,12,.8);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border-bottom:1px solid var(--hair)}
+.top img{height:30px;filter:drop-shadow(0 0 8px rgba(95,225,255,.35))}
+.brand{font-family:"Chakra Petch",sans-serif;font-size:18px;letter-spacing:.12em;background:none;-webkit-background-clip:initial;background-clip:initial;color:var(--ink)}
+.sub{font-family:"Chakra Petch",sans-serif;font-size:11px;letter-spacing:.16em;color:var(--ink-2)}
+.card,.kpi{background:var(--card);border:0;box-shadow:0 0 0 1px var(--hair);border-radius:16px}
+.kpi b,.met b{font-weight:750}
+.btn{background:var(--fill);border:0;box-shadow:0 0 0 1px var(--hair);color:var(--ink)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);box-shadow:0 6px 22px rgba(181,123,255,.28);font-weight:700}
+.btn.ghost{box-shadow:none;background:transparent;color:var(--accent)}
+.btn.danger{color:var(--alert);box-shadow:0 0 0 1px rgba(255,122,133,.4);background:transparent}
+.input{background:var(--fill);border:1px solid var(--hair);color:var(--ink)}
+.input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea.input{min-height:84px;width:100%;resize:vertical;font:inherit;line-height:1.4}
+.seg{background:var(--fill);padding:2px;border-radius:10px}
+.seg button[aria-pressed="true"]{background:var(--hair);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.st-ok{background:rgba(95,225,255,.12);color:var(--holo)}.st-ok i{background:var(--holo);box-shadow:0 0 8px rgba(95,225,255,.6)}
+.st-warn{background:rgba(255,200,97,.14);color:var(--warn)}.st-warn i{background:var(--warn);box-shadow:none}
+.st-bad{background:rgba(255,122,133,.14);color:var(--alert)}.st-bad i{background:var(--alert);box-shadow:0 0 8px rgba(255,122,133,.6)}
+.client:hover{box-shadow:0 0 0 1px var(--line-hi),0 10px 30px rgba(181,123,255,.12)}
+.client.has-alert{box-shadow:0 0 0 1px rgba(255,122,133,.55)}
+.flag.alert{color:#ffb3ba}.flag.alert i{background:var(--alert);box-shadow:0 0 8px var(--alert)}
+.ci-note{background:var(--fill);border-left-color:var(--accent)}
+.tdee b{background:none;-webkit-background-clip:initial;background-clip:initial;color:var(--holo);font-family:inherit;font-weight:800}
+.mtrack{background:var(--fill)}.mtrack u{background:var(--ink-2)}
+.cell{background:var(--fill);border:0}
+.cell.in{background:var(--accent);color:var(--accent-ink);font-weight:700;box-shadow:none}
+.cell.off{background:rgba(255,200,97,.25);border:0;color:var(--ink)}
+.cell.water{background:rgba(95,225,255,.1)}
+#toast{background:var(--accent);color:var(--accent-ink);border:0;font-weight:650}
+.eyebrow{font-family:"Chakra Petch",sans-serif;font-size:12px;font-weight:700;color:var(--holo);text-transform:uppercase;letter-spacing:.06em}
+.ci-card{box-shadow:0 0 0 1px rgba(181,123,255,.45),0 0 26px rgba(181,123,255,.1)}
+.reply{display:flex;flex-direction:column;gap:10px}
+.chk{display:flex;align-items:center;gap:10px;font-weight:600;min-height:40px;cursor:pointer}
+.chk input{width:20px;height:20px;accent-color:var(--accent)}
+.goalgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.goalgrid label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--ink-2);font-weight:600}
+@media (max-width:520px){.goalgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Breite Ansicht: Kundenliste links wie im Muskelatlas */
+.dlayout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:18px;align-items:start}
+.side{position:sticky;top:70px;background:var(--bg);border-radius:16px;box-shadow:0 0 0 1px var(--hair);overflow:hidden}
+.side h3{padding:14px 16px 6px;font-size:13px;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.sc{display:grid;grid-template-columns:10px 1fr auto;gap:12px;align-items:center;padding:11px 14px;border:0;background:none;color:var(--ink);text-align:left;width:100%;position:relative;font-size:15px}
+.sc+.sc::before{content:"";position:absolute;top:0;left:36px;right:0;height:1px;background:var(--hair)}
+.sc.sel{background:var(--accent-soft)}
+.sc small{display:block;color:var(--ink-2);font-size:12.5px}
+.sc .d{width:10px;height:10px;border-radius:50%}
+.sc .d.st-ok{background:var(--holo)}.sc .d.st-warn{background:var(--warn)}.sc .d.st-bad{background:var(--alert);box-shadow:0 0 8px rgba(255,122,133,.6)}.sc .d.st-old{background:var(--ink-2)}
+.dmain{display:flex;flex-direction:column;gap:16px;min-width:0}
+</style>
+
+<div class="wrap">
+  <header class="top"><img id="logo" alt="" hidden><span class="brand" id="brand">MTC</span><span class="sub">Coach-Dashboard</span><span class="spacer"></span><a class="btn ghost small" href="./" style="text-decoration:none">← Zur App</a></header>
+  <main id="view" style="display:flex;flex-direction:column;gap:16px"></main>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+const LOGO="icons/logo-white.png";
+if(LOGO){const l=document.getElementById("logo");l.src=LOGO;l.hidden=false}
+const KEY="mtc-coach-v1";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=(n,d=0)=>n==null||isNaN(n)?"–":Number(n).toLocaleString("de-DE",{minimumFractionDigits:d,maximumFractionDigits:d});
+const WD=["So","Mo","Di","Mi","Do","Fr","Sa"];
+function keyOf(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function parseKey(k){const [y,m,d]=k.split("-").map(Number);return new Date(y,m-1,d)}
+function addDays(k,n){const d=parseKey(k);d.setDate(d.getDate()+n);return keyOf(d)}
+const todayKey=()=>keyOf(new Date());
+const shortDate=k=>{const d=parseKey(k);return d.getDate()+"."+(d.getMonth()+1)+"."};
+let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),2600)}
+
+let DB={clients:{}};
+try{const s=localStorage.getItem(KEY);if(s)DB=JSON.parse(s)||DB;if(!DB.clients)DB.clients={}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){toast("⚠️ Speichern auf diesem Gerät nicht möglich")}}
+
+/* ---------- Link einlesen ---------- */
+function bytesFromB64url(s){s=s.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";const bin=atob(s);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u}
+async function decode(data){
+  const kind=data[0],raw=bytesFromB64url(data.slice(1));
+  let txt;if(kind==="z"){const ds=new Blob([raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"));txt=await new Response(ds).text()}else txt=new TextDecoder().decode(raw);
+  const o=JSON.parse(txt);if(!o||o.v!==1||!o.id||!Array.isArray(o.d))throw new Error("format");return o;
+}
+function importSnap(o){
+  const c=DB.clients[o.id]||{id:o.id,days:{},firstTs:o.ts};
+  if(c.lastTs&&o.ts<c.lastTs)return {c,old:true};
+  for(let i=0;i<30;i++)delete c.days[addDays(o.e,-i)];
+  o.d.forEach(r=>{c.days[addDays(o.e,-r[0])]=r.slice(1)});
+  const keys=Object.keys(c.days).sort();if(keys.length>180)keys.slice(0,keys.length-180).forEach(k=>delete c.days[k]);
+  if(o.ci&&(o.ci.e||o.ci.h||o.ci.t))c.ci=Object.assign({},o.ci,{at:o.ts});
+  Object.assign(c,{name:o.n||c.name||"",g:o.g,r:o.r||0,lastTs:o.ts,lastEnd:o.e,streak:o.s||0,fg:o.fg||c.fg||30,tdee:o.x||0});
+  if(o.x){c.tdeeHist=(c.tdeeHist||[]).filter(h=>h.d!==o.e).concat([{d:o.e,v:o.x}]).slice(-20)}
+  DB.clients[o.id]=c;save();return {c,old:false};
+}
+async function importFromString(str){
+  const m=String(str).match(/#c([zj][A-Za-z0-9_-]+)/);if(!m)throw new Error("nolink");
+  const o=await decode(m[1]);return importSnap(o);
+}
+
+/* ---------- Kennzahlen ---------- */
+function dayGoal(c,row){const g=c.g||[0,0,0,0,0];if(row&&row[6]&&c.r)return {kcal:g[0],p:g[1],c:g[2],f:g[3]};if(c.r&&row&&!row[6])return {kcal:c.r[0],p:c.r[1],c:c.r[2],f:c.r[3]};return {kcal:g[0],p:g[1],c:g[2],f:g[3]}}
+function rows(c,n){const out=[];const end=c.lastEnd||todayKey();for(let i=n-1;i>=0;i--){const k=addDays(end,-i);const r=c.days[k];out.push({k,r,tracked:!!(r&&r[0]>0),g:dayGoal(c,r)})}return out}
+function stats(c,n){
+  const rs=rows(c,n),tr=rs.filter(x=>x.tracked);
+  const avg=i=>tr.length?tr.reduce((s,x)=>s+x.r[i],0)/tr.length:NaN;
+  const gavg=k=>tr.length?tr.reduce((s,x)=>s+x.g[k],0)/tr.length:(c.g?c.g[{kcal:0,p:1,c:2,f:3}[k]]:NaN);
+  const trF=tr.filter(x=>x.r.length>7);const fib=trF.length?trF.reduce((s,x)=>s+x.r[7],0)/trF.length:NaN;
+  return {rs,n,tracked:tr.length,kcal:avg(1),p:avg(2),c:avg(3),f:avg(4),fib,fibOk:trF.filter(x=>x.r[7]>=(c.fg||30)).length,nF:trF.length,gk:gavg("kcal"),gp:gavg("p"),gc:gavg("c"),gf:gavg("f"),
+    inRange:tr.filter(x=>Math.abs(x.r[1]-x.g.kcal)<=x.g.kcal*0.1).length,protOk:tr.filter(x=>x.r[2]>=x.g.p*0.9).length};
+}
+const ENERGY=["Platt","Müde","Okay","Gut","Top"],HUNGER=["Kaum","Wenig","Normal","Viel","Ständig"];
+const PAIN=/schmerz|verletz|\bweh\b|zieht|zwickt|krank|entzünd|zerr|verspann|überlast|schwindel|kreislauf|übel/i;
+function flagsOf(c){const f=[],ci=c.ci;
+  if(ci&&ageDaysTs(ci.at)<=14){if(ci.t&&PAIN.test(ci.t))f.push(["alert","Beschwerden in der Notiz erwähnt"]);if(ci.e&&ci.e<=2)f.push(["warn",`Energie niedrig (${ci.e}/5 · ${ENERGY[ci.e-1]})`]);if(ci.h&&ci.h>=4)f.push(["warn",`Viel Hunger (${ci.h}/5 · ${HUNGER[ci.h-1]})`])}
+  const s7=stats(c,7);if(s7.tracked>=3&&s7.gp&&s7.p/s7.gp<0.8)f.push(["warn",`Protein nur ${Math.round(s7.p/s7.gp*100)} % vom Ziel`]);
+  if(s7.tracked>=3&&s7.gk&&s7.kcal/s7.gk<0.75)f.push(["warn",`Isst deutlich unter dem Ziel (${Math.round(s7.kcal/s7.gk*100)} %)`]);
+  return f}
+function ageDaysTs(ts){return Math.floor((Date.now()-(ts||0))/864e5)}
+function flagList(f){return f.length?`<div class="flags">${f.map(x=>`<div class="flag ${x[0]}"><i></i>${esc(x[1])}</div>`).join("")}</div>`:""}
+function ageDays(c){return Math.floor((parseKey(todayKey())-parseKey(c.lastEnd||todayKey()))/864e5)}
+function status(c){const a=ageDays(c);if(a>7)return {cls:"st-old",label:`Kein Update seit ${a} Tagen`,rank:3};
+  const t=stats(c,7).tracked;if(t>=5)return {cls:"st-ok",label:"Läuft",rank:0};if(t>=3)return {cls:"st-warn",label:"Lücken",rank:1};return {cls:"st-bad",label:"Kaum getrackt",rank:2}}
+const pct=(v,g)=>g>0&&!isNaN(v)?Math.round(v/g*100):NaN;
+function nameOf(c){return c.name||("Kunde "+c.id.slice(-4).toUpperCase())}
+function standText(c){const a=ageDays(c);return a===0?"Stand: heute":a===1?"Stand: gestern":`Stand: vor ${a} Tagen (${shortDate(c.lastEnd)})`}
+
+/* ---------- Diagramme ---------- */
+function wide(){return innerWidth>=1100&&view.id&&Object.keys(DB.clients).length>0}
+function chartW(){const w=(($("#view")&&$("#view").clientWidth)||800)-(wide()?298:0);return Math.max(320,Math.min(1000,Math.round(w-34)))}
+function niceStep(x){const p=Math.pow(10,Math.floor(Math.log10(x)));const m=x/p;return (m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*p}
+function barChart(rs,idx,goalKey,color,H,label,wOverride){
+  const W=wOverride||chartW(),L=46,R=10,T=14,B=24,n=rs.length;
+  const vals=rs.map(x=>x.tracked?x.r[idx]:0),goals=rs.map(x=>x.g[goalKey]);
+  const maxV=Math.max(...goals.map(g=>g*1.25),...vals,1);const step=niceStep(maxV/4);const top=Math.ceil(maxV/step)*step;
+  const y=v=>T+(H-T-B)*(1-v/top),bw=(W-L-R)/n,gap=Math.min(6,bw*0.22);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}"><defs><linearGradient id="bg${idx}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color[0]}"/><stop offset="1" stop-color="${color[1]}"/></linearGradient></defs>`;
+  for(let v=0;v<=top+1e-9;v+=step){s+=`<line x1="${L}" x2="${W-R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="#1c2b3d"/><text x="${L-6}" y="${(y(v)+4).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`}
+  let gp="";rs.forEach((x,i)=>{const x0=L+i*bw,yy=y(x.g[goalKey]).toFixed(1);gp+=(i?"L":"M")+x0.toFixed(1)+","+yy+" L"+(x0+bw).toFixed(1)+","+yy+" "});
+  rs.forEach((x,i)=>{const bx=L+i*bw+gap/2;if(x.tracked){const v=x.r[idx];const ok=goalKey==="kcal"?Math.abs(v-x.g.kcal)<=x.g.kcal*0.1:v>=x.g[goalKey]*0.9;
+      s+=`<rect x="${bx.toFixed(1)}" y="${y(v).toFixed(1)}" width="${(bw-gap).toFixed(1)}" height="${Math.max(0,H-B-y(v)).toFixed(1)}" rx="3" fill="${ok?`url(#bg${idx})`:"rgba(255,200,97,.85)"}"><title>${WD[parseKey(x.k).getDay()]} ${shortDate(x.k)}: ${fmt(v)}${goalKey==="kcal"?" kcal":" g"} (Ziel ${fmt(x.g[goalKey])})</title></rect>`}
+    else s+=`<rect x="${bx.toFixed(1)}" y="${(H-B-3).toFixed(1)}" width="${(bw-gap).toFixed(1)}" height="3" rx="1.5" fill="#1c2b3d"><title>${shortDate(x.k)}: kein Eintrag</title></rect>`;
+    const every=n<=7?1:n<=14?2:5;if((n-1-i)%every===0)s+=`<text x="${(L+i*bw+bw/2).toFixed(1)}" y="${H-7}" text-anchor="middle">${n<=7?WD[parseKey(x.k).getDay()]:shortDate(x.k)}</text>`});
+  s+=`<path d="${gp}" fill="none" stroke="#5fe1ff" stroke-opacity=".9" stroke-width="1.5" stroke-dasharray="5 4"/></svg>`;
+  return s;
+}
+function spark(c){const rs=rows(c,14),W=280,H=44,bw=W/14;let s=`<svg viewBox="0 0 ${W} ${H}" aria-hidden="true" style="width:100%;height:44px">`;
+  const top=Math.max(...rs.map(x=>x.g.kcal*1.3),...rs.map(x=>x.tracked?x.r[1]:0),1);
+  rs.forEach((x,i)=>{const gx=i*bw+2,w=bw-4;if(x.tracked){const v=x.r[1],h=Math.max(2,v/top*(H-4)),ok=Math.abs(v-x.g.kcal)<=x.g.kcal*0.1;s+=`<rect x="${gx.toFixed(1)}" y="${(H-h).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${ok?"#8B5CFF":"rgba(255,200,97,.85)"}"/>`}
+    else s+=`<rect x="${gx.toFixed(1)}" y="${H-3}" width="${w.toFixed(1)}" height="3" rx="1.5" fill="#1c2b3d"/>`});
+  const gy=H-(rs[rs.length-1].g.kcal/top*(H-4));s+=`<line x1="0" x2="${W}" y1="${gy.toFixed(1)}" y2="${gy.toFixed(1)}" stroke="#5fe1ff" stroke-opacity=".7" stroke-dasharray="4 4"/></svg>`;return s}
+function calendar(c){
+  const end=c.lastEnd||todayKey(),endD=parseKey(end);const dow=(endD.getDay()+6)%7;const lastMon=addDays(end,-dow);const start=addDays(lastMon,-28);
+  let h=`<div class="cal"><span></span>${["Mo","Di","Mi","Do","Fr","Sa","So"].map(d=>`<span class="h">${d}</span>`).join("")}`;
+  for(let w=0;w<5;w++){const wk=addDays(start,w*7);h+=`<span class="w">${shortDate(wk)}</span>`;
+    for(let d=0;d<7;d++){const k=addDays(wk,d);const r=c.days[k];let cls="cell",tip=`${WD[parseKey(k).getDay()]} ${shortDate(k)}: `;
+      if(k>end){cls+=" future";tip+="nach dem Stand"}
+      else if(r&&r[0]>0){const g=dayGoal(c,r);const ok=Math.abs(r[1]-g.kcal)<=g.kcal*0.1;cls+=ok?" in":" off";tip+=`${fmt(r[1])} kcal (Ziel ${fmt(g.kcal)})`}
+      else if(r&&r[5]>0){cls+=" water";tip+="nur Wasser eingetragen"}else tip+="kein Eintrag";
+      h+=`<span class="${cls}" title="${esc(tip)}">${parseKey(k).getDate()}</span>`}}
+  return h+`</div><div class="legend"><span><i style="background:#b57bff"></i>getrackt & im Kalorienziel (±10 %)</span><span><i style="background:rgba(255,194,71,.6)"></i>getrackt, außerhalb</span><span><i style="background:rgba(255,255,255,.06);border:1px solid #232D5E"></i>kein Eintrag</span></div>`;
+}
+
+/* ---------- Antworten: Nachricht & Ziele per Link an die Kunden-App ---------- */
+function b64enc(obj){return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+function replyBox(c){const g=c.g||[0,0,0,0,0];const f=(id,l,v)=>`<label>${l}<input class="input" id="${id}" inputmode="numeric" value="${v||""}"></label>`;
+  return `<section class="card reply" id="reply"><span class="eyebrow">Antwort an ${esc(nameOf(c))}</span>
+    <textarea class="input" id="r-msg" maxlength="600" placeholder="z. B. Starke Woche! Diese Woche Fokus auf Ballaststoffe – Ziel 30 g am Tag."></textarea>
+    <label class="chk"><input type="checkbox" id="r-goals"> Neue Tagesziele mitschicken</label>
+    <div class="goalgrid" id="r-g" hidden>${f("r-kcal","Kalorien",g[0])}${f("r-p","Protein (g)",g[1])}${f("r-c","Kohlenhydrate (g)",g[2])}${f("r-f","Fett (g)",g[3])}</div>
+    <p class="note" style="margin:0">Dein Kunde öffnet den Link und sieht die Nachricht in seinem Check-in. Neue Ziele übernimmt er mit einem Tipp${c.r?" – dabei ersetzt ein einheitliches Ziel seine Trainings-/Ruhetag-Ziele":""}.</p>
+    <div class="row"><button class="btn primary" data-a="reply">📤 Link erstellen & senden</button></div></section>`}
+async function sendReply(c){
+  const m=($("#r-msg").value||"").trim().slice(0,600),o={};if(m)o.m=m;
+  if($("#r-goals").checked){const v=id=>Math.round(parseFloat(String($(id).value).replace(",",".")));const g={kcal:v("#r-kcal"),p:v("#r-p"),c:v("#r-c"),f:v("#r-f")};
+    if(!(g.kcal>800&&g.p>=0&&g.c>=0&&g.f>=0)){toast("Bitte die Ziele als Zahlen eingeben");return}g.water=(c.g&&c.g[4])||undefined;o.g=g}
+  if(!o.m&&!o.g){toast("Schreib eine Nachricht oder schick neue Ziele mit");return}
+  const url=new URL("./",location.href).href.split("#")[0]+"#coach-"+b64enc(o),txt=(o.g?"🎯 Neue Ziele & Nachricht von deinem Coach: ":"💬 Nachricht von deinem Coach: ")+url;
+  if(navigator.share){try{await navigator.share({text:txt});toast("✅ Gesendet");return}catch(e){if(e&&e.name==="AbortError")return}}
+  try{await navigator.clipboard.writeText(txt);toast("📋 Link kopiert – jetzt an "+nameOf(c)+" schicken")}catch(e){prompt("Link kopieren:",url)}}
+
+/* ---------- Ansichten ---------- */
+let view={id:null,range:30,delArmed:false};
+function render(){view.id&&DB.clients[view.id]?renderDetail(DB.clients[view.id]):renderList()}
+function pasteBox(){return `<section class="card" style="display:flex;flex-direction:column;gap:10px"><h3>🔗 Link von einem Kunden einfügen</h3><p class="muted small" style="margin:0">Öffnest du den Link direkt aus WhatsApp, landet der Kunde automatisch hier. Am Computer kannst du ihn auch einfügen.</p><div class="row"><input class="input" id="paste" placeholder="https://…/coach.html#c…" autocomplete="off"><button class="btn primary" data-a="paste">Übernehmen</button></div></section>`}
+function renderList(){
+  const list=Object.values(DB.clients).map(c=>({c,st:status(c)})).sort((a,b)=>a.st.rank-b.st.rank||(b.c.lastTs-a.c.lastTs));
+  if(!list.length){$("#view").innerHTML=`<section class="card empty"><span class="big">📊</span><h2>Noch keine Kunden</h2><p class="muted" style="max-width:52ch;margin:0">Dein Kunde tippt in seiner App unter <b>Check-in → An Coach senden</b>. Sobald du den Link öffnest, erscheint er hier mit seinen letzten 30 Tagen.</p></section>${pasteBox()}<p class="note">Alle Kundendaten werden nur auf diesem Gerät in diesem Browser gespeichert.</p>`;return}
+  const cnt=k=>list.filter(x=>x.st.cls===k).length;
+  $("#view").innerHTML=`<div class="row"><h1>Deine Kunden</h1><span class="spacer"></span><span class="pill st-ok"><i></i>${cnt("st-ok")} läuft</span><span class="pill st-warn"><i></i>${cnt("st-warn")} Lücken</span><span class="pill st-bad"><i></i>${cnt("st-bad")} kaum</span>${cnt("st-old")?`<span class="pill st-old"><i></i>${cnt("st-old")} veraltet</span>`:""}</div>
+  <div class="grid">${list.map(({c,st})=>{const s7=stats(c,7);return `<button class="card client ${flagsOf(c).some(x=>x[0]==="alert")?"has-alert":""}" data-a="open" data-id="${esc(c.id)}">
+    <div class="client-head"><div><h3>${esc(nameOf(c))}</h3><span class="muted small">${standText(c)}</span></div><span class="pill ${st.cls}"><i></i>${st.label}</span></div>
+    <div class="mets"><div class="met"><small>Getrackt 7 T</small><b>${s7.tracked}/7</b></div><div class="met"><small>Ø kcal</small><b>${isNaN(pct(s7.kcal,s7.gk))?"–":pct(s7.kcal,s7.gk)+" %"}</b></div><div class="met"><small>Ø Protein</small><b>${isNaN(pct(s7.p,s7.gp))?"–":pct(s7.p,s7.gp)+" %"}</b></div></div>
+    ${spark(c)}<span class="muted small">Letzte 14 Tage · Kalorien pro Tag, Linie = Ziel</span>${flagList(flagsOf(c))}</button>`}).join("")}</div>
+  ${pasteBox()}<p class="note">Alle Kundendaten werden nur auf diesem Gerät in diesem Browser gespeichert. Ampel: ≥ 5 von 7 Tagen getrackt = läuft, 3–4 = Lücken, ≤ 2 = kaum. Prozentwerte = Durchschnitt der getrackten Tage im Verhältnis zum Ziel.</p>`;
+}
+function macroRows(st,c){const row=(emo,label,v,g,color)=>{const p=pct(v,g),w=isNaN(p)?0:Math.min(p,150)/150*100;return `<div class="mrow"><span>${emo} ${label}</span><div class="mtrack"><i style="width:${w.toFixed(1)}%;background:${color};box-shadow:0 0 10px ${color}66"></i><u style="left:${(100/150*100).toFixed(1)}%" title="Ziel"></u></div><b>${isNaN(p)?"–":p+" %"}</b></div><div class="muted small" style="margin:-8px 0 0 0;text-align:right">Ø ${fmt(v)} von ${fmt(g)} ${label==="Kalorien"?"kcal":"g"}</div>`};
+  return row("🔥","Kalorien",st.kcal,st.gk,"#dbe8f5")+row("🥩","Protein",st.p,st.gp,"#b57bff")+row("🍞","Kohlenhydrate",st.c,st.gc,"#ffc861")+row("🥑","Fett",st.f,st.gf,"#5fe1ff")+(isNaN(st.fib)?"":row("🌾","Ballaststoffe",st.fib,c.fg||30,"#7ee0a5"))}
+function renderDetail(c){
+  const st=stats(c,view.range),s=status(c),n=view.range;const half=($("#view").clientWidth||800)>760?Math.round(chartW()/2-40):undefined;
+  const html=`<div class="row"><button class="btn ghost" data-a="back">← Alle Kunden</button></div>
+  <div class="row"><div><h1>${esc(nameOf(c))}</h1><span class="muted small">${standText(c)} · Serie: ${c.streak||0} Tage in Folge</span></div><span class="pill ${s.cls}"><i></i>${s.label}</span><span class="spacer"></span>
+    <div class="seg">${[7,14,30].map(r=>`<button data-a="range" data-r="${r}" aria-pressed="${n===r}">${r} Tage</button>`).join("")}</div></div>
+  <div class="summary-row">
+    <div class="kpi"><small>Getrackt</small><b>${st.tracked}/${n}</b><span>Tage mit Einträgen</span></div>
+    <div class="kpi"><small>Ø Kalorien</small><b>${fmt(st.kcal)}</b><span>${isNaN(pct(st.kcal,st.gk))?"&nbsp;":pct(st.kcal,st.gk)+" % vom Ziel ("+fmt(st.gk)+")"}</span></div>
+    <div class="kpi"><small>Kalorienziel ±10 %</small><b>${st.inRange}/${st.tracked||0}</b><span>getrackte Tage im Ziel</span></div>
+    <div class="kpi"><small>Proteinziel (≥ 90 %)</small><b>${st.protOk}/${st.tracked||0}</b><span>getrackte Tage erreicht</span></div>
+  </div>
+  ${c.tdee?`<section class="card tdee"><div><small>🧠 Geschätzter echter Verbrauch (App, letzte 4 Wochen)</small><b>${fmt(c.tdee)} kcal</b><span>${c.g&&c.g[0]?`Aktuelles Ziel ${fmt(c.g[0])} kcal → ${Math.abs(c.g[0]-c.tdee)<30?"etwa Erhaltungsniveau":`${fmt(Math.abs(c.g[0]-c.tdee))} kcal ${c.g[0]<c.tdee?"Defizit":"Überschuss"} pro Tag`}`:""}${(c.tdeeHist||[]).length>1?` · Verlauf: ${c.tdeeHist.slice(-5).map(h=>fmt(h.v)).join(" → ")}`:""}</span></div></section>`:`<p class="note" style="margin:0">🧠 Echter Verbrauch: Der Kunde hat noch zu wenige Tage und Wiegungen für eine Schätzung.</p>`}
+  ${(()=>{const f=flagsOf(c),ci=c.ci;if(!ci&&!f.length)return "";
+    return `<section class="card ci-card" style="display:flex;flex-direction:column;gap:10px"><h3>📋 Letzter Check-in${ci?` <span class="muted small" style="font-weight:500">· ${ageDaysTs(ci.at)===0?"heute":ageDaysTs(ci.at)===1?"gestern":"vor "+ageDaysTs(ci.at)+" Tagen"}</span>`:""}</h3>
+      ${ci?`<div class="mets"><div class="met"><small>Energie</small><b>${ci.e?ci.e+"/5":"–"}</b><span class="muted small">${ci.e?ENERGY[ci.e-1]:""}</span></div><div class="met"><small>Hunger</small><b>${ci.h?ci.h+"/5":"–"}</b><span class="muted small">${ci.h?HUNGER[ci.h-1]:""}</span></div></div>
+      ${ci.t?`<blockquote class="ci-note">${esc(ci.t)}</blockquote>`:""}`:""}${flagList(f)}<div class="row"><button class="btn primary" data-a="reply-focus">💬 Antworten</button><button class="btn" data-a="reply-goals">🎯 Ziele anpassen</button></div></section>`})()}
+  ${replyBox(c)}
+  <section class="card" style="display:flex;flex-direction:column;gap:12px"><h3>🎯 Makros: Durchschnitt vs. Ziel</h3><div class="macro">${macroRows(st,c)}</div><p class="note" style="margin:0">Graue Linie = 100 % des Ziels.</p></section>
+  <section class="card" style="display:flex;flex-direction:column;gap:8px"><h3>🔥 Kalorien pro Tag</h3><div class="chart">${barChart(st.rs,1,"kcal",["#c79bff","#9a62f0"],230,"Kalorien pro Tag")}</div><div class="legend"><span><i style="background:#b57bff"></i>im Ziel (±10 %)</span><span><i style="background:rgba(255,200,97,.85)"></i>außerhalb</span><span><i style="background:#1c2b3d"></i>kein Eintrag</span><span>- - - Ziel</span></div></section>
+  <div class="grid">
+    <section class="card" style="display:flex;flex-direction:column;gap:8px"><h3>🥩 Protein pro Tag</h3><div class="chart">${barChart(st.rs,2,"p",["#c79bff","#b57bff"],170,"Protein pro Tag",half)}</div></section>
+    <section class="card" style="display:flex;flex-direction:column;gap:8px"><h3>🍞 Kohlenhydrate pro Tag</h3><div class="chart">${barChart(st.rs,3,"c",["#ffd88a","#ffc861"],170,"Kohlenhydrate pro Tag",half)}</div></section>
+    <section class="card" style="display:flex;flex-direction:column;gap:8px"><h3>🥑 Fett pro Tag</h3><div class="chart">${barChart(st.rs,4,"f",["#8eeaff","#5fe1ff"],170,"Fett pro Tag",half)}</div></section>
+    <section class="card" style="display:flex;flex-direction:column;gap:10px"><h3>📅 Tracking-Kalender (5 Wochen)</h3>${calendar(c)}</section>
+  </div>
+  <div class="row"><span class="note">Ziele laut Kunden-App: ${fmt(c.g[0])} kcal · P ${fmt(c.g[1])} · KH ${fmt(c.g[2])} · F ${fmt(c.g[3])} g${c.r?` (Ruhetag ${fmt(c.r[0])} kcal)`:""}</span><span class="spacer"></span><button class="btn danger" data-a="del">${view.delArmed?"Wirklich entfernen? Nochmal tippen":"Kunden entfernen"}</button></div>`;;
+  if(!wide()){$("#view").innerHTML=html;return}
+  const list=Object.values(DB.clients).map(x=>({c:x,st:status(x)})).sort((a,b)=>a.st.rank-b.st.rank||(b.c.lastTs-a.c.lastTs));
+  $("#view").innerHTML=`<div class="dlayout"><aside class="side"><h3>Kunden · ${list.length}</h3>${list.map(({c:x,st})=>`<button class="sc ${x.id===c.id?"sel":""}" data-a="open" data-id="${esc(x.id)}"><span class="d ${st.cls}"></span><span>${esc(nameOf(x))}<small>${st.label}</small></span><span class="muted small">${stats(x,7).tracked}/7</span></button>`).join("")}</aside><div class="dmain">${html}</div></div>`
+}
+document.addEventListener("click",async e=>{const b=e.target.closest("[data-a]");if(!b)return;const a=b.dataset.a;
+  if(a==="open"){view={id:b.dataset.id,range:30,delArmed:false};render();scrollTo({top:0})}
+  else if(a==="back"){view.id=null;render()}
+  else if(a==="reply"){const c=DB.clients[view.id];if(c)sendReply(c)}
+  else if(a==="reply-focus"){const t=$("#r-msg");if(t){t.scrollIntoView({block:"center",behavior:"smooth"});t.focus({preventScroll:true})}}
+  else if(a==="reply-goals"){const k=$("#r-goals");if(k){k.checked=true;$("#r-g").hidden=false;k.scrollIntoView({block:"center",behavior:"smooth"})}}
+  else if(a==="range"){view.range=+b.dataset.r;render()}
+  else if(a==="del"){if(!view.delArmed){view.delArmed=true;render();return}delete DB.clients[view.id];save();view.id=null;view.delArmed=false;render();toast("Kunde entfernt")}
+  else if(a==="paste"){try{const {c,old}=await importFromString($("#paste").value);view={id:c.id,range:30,delArmed:false};render();toast(old?"Dieser Link ist älter als der gespeicherte Stand":`✅ ${nameOf(c)} aktualisiert`)}catch(err){toast("Das ist kein gültiger Kunden-Link")}}
+});
+document.addEventListener("change",e=>{if(e.target.id==="r-goals")$("#r-g").hidden=!e.target.checked});
+let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(render,200)});
+async function fromHash(){
+  const h=location.hash||"";
+  if(h.startsWith("#c")&&h.length>3){try{const {c,old}=await importFromString(h);view={id:c.id,range:30,delArmed:false};toast(old?"Dieser Link ist älter als der gespeicherte Stand":`✅ ${nameOf(c)} aktualisiert`)}catch(err){toast("Der Link konnte nicht gelesen werden")}
+    try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}}
+  render();
+}
+addEventListener("hashchange",fromHash);fromHash();
+})();
+</script>
+<script>if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost")){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}</script>
+</body></html>

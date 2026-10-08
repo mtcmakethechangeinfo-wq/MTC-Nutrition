@@ -1,0 +1,2 @@
+# Online-Suche: Weiterleitung zu Open Food Facts (umgeht die CORS-Sperre im Browser)
+/api/off-search  https://search.openfoodfacts.org/search  200

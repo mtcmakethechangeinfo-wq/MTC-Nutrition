@@ -1,0 +1,4 @@
+# Netlify: kein Build nötig – die Dateien werden direkt veröffentlicht.
+[build]
+  publish = "."
+  command = ""
