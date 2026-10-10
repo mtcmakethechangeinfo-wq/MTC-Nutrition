@@ -480,7 +480,7 @@ const CONFIG={
   coachUrl:"coach.html", // Seite deines Coach-Dashboards (relativ zur App)
   whatsapp:"",
   email:"",
-  access:true,              // true = App nur mit persönlichem Freischalt-Code (Codes erstellst du im Coach-Dashboard → Zugänge)
+  access:false,             // true = App nur mit persönlichem Freischalt-Code (Codes erstellst du im Coach-Dashboard → Zugänge)
   accessApi:"api/access"
 };
 
@@ -1902,7 +1902,17 @@ async function accessActivate(btn){
   btn.disabled=false;
 }
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")accessRecheck()});
-if(accessNeeded())lockScreen(S.access&&S.access.reason||"");else{startModals();setTimeout(accessRecheck,1500)}
+/* Sicherheitsnetz: Sperrbildschirm nur, wenn der Freischalt-Server wirklich antwortet.
+   Ist er nicht eingerichtet oder nicht erreichbar, startet die App normal – niemand wird ausgesperrt. */
+async function accessStart(){
+  if(!accessNeeded()){startModals();setTimeout(accessRecheck,1500);return}
+  let serverOk=false;
+  try{const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),5000);
+    const r=await fetch(CONFIG.accessApi,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"check",code:"PING",device:accDevice()}),signal:ctl.signal});clearTimeout(t);
+    const j=await r.json().catch(()=>null);serverOk=!!(j&&typeof j.ok==="boolean")}catch(e){}
+  if(serverOk)lockScreen(S.access&&S.access.reason||"");else startModals();
+}
+accessStart();
 
 })();
 </script>
