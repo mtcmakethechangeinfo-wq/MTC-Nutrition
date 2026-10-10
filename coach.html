@@ -182,6 +182,7 @@ textarea.input{min-height:84px;width:100%;resize:vertical;font:inherit;line-heig
 .code.sm{font-size:13.5px}
 .newcode{display:grid;gap:8px;justify-items:start;background:var(--fill);border-radius:14px;padding:14px}
 .newcode .code{font-size:28px}
+.lockcard.on{box-shadow:0 0 0 1px rgba(95,225,255,.5),0 0 26px rgba(95,225,255,.08)}
 </style>
 
 <div class="wrap">
@@ -323,9 +324,10 @@ const ADM={key:(()=>{try{return localStorage.getItem(ADM_KEY)||""}catch(e){retur
 async function adm(action,extra){const r=await fetch("api/access-admin",{method:"POST",headers:{"content-type":"application/json","x-admin-key":ADM.key},body:JSON.stringify(Object.assign({action},extra||{}))});
   let j=null;try{j=await r.json()}catch(e){}if(!j||typeof j.ok!=="boolean")throw new Error("net");return j}
 function admFail(j){ADM.err=j.reason||"x";if(j.reason==="auth"){ADM.key="";try{localStorage.removeItem(ADM_KEY)}catch(e){}}}
-async function admLoad(){ADM.busy=true;try{const j=await adm("list");if(j.ok){ADM.items=j.items;ADM.max=j.max||2;ADM.err="";try{localStorage.setItem(ADM_KEY,ADM.key)}catch(e){}}else admFail(j)}catch(e){ADM.err="net"}ADM.busy=false;render()}
+async function admLoad(){ADM.busy=true;try{const j=await adm("list");if(j.ok){ADM.items=j.items;ADM.max=j.max||2;ADM.st=j.settings||{enabled:false,legacyFree:true};ADM.err="";try{localStorage.setItem(ADM_KEY,ADM.key)}catch(e){}}else admFail(j)}catch(e){ADM.err="net"}ADM.busy=false;render()}
 function appUrl(){return new URL("./",location.href).href}
-function shareText(it){return `Hi ${it.name.split(" ")[0]}! 💪 Hier ist dein Zugang zur MTC Makro-App:\n\n1️⃣ Öffnen: ${appUrl()}\n2️⃣ Code eingeben: ${it.code}\n3️⃣ Tipp: Teilen → „Zum Home-Bildschirm“ – dann ist sie wie eine echte App.\n\nDer Code ist persönlich und funktioniert auf max. ${ADM.max} Geräten.`}
+function inviteUrl(it){return appUrl()+"#code="+encodeURIComponent(it.code)}
+function shareText(it){return `Hi ${it.name.split(" ")[0]}! 💪 Hier ist deine MTC Makro-App:\n\n👉 ${inviteUrl(it)}\n\nEinfach antippen – du bist automatisch freigeschaltet.\nTipp: Danach über Teilen → „Zum Home-Bildschirm“ wie eine echte App öffnen.\n\nFalls nach einem Code gefragt wird: ${it.code}`}
 async function shareOrCopy(txt){if(navigator.share){try{await navigator.share({text:txt});return}catch(e){if(e&&e.name==="AbortError")return}}try{await navigator.clipboard.writeText(txt);toast("📋 Text kopiert – jetzt in WhatsApp einfügen")}catch(e){prompt("Text kopieren:",txt)}}
 function renderAccess(){
   const ERR={auth:"Falsches Passwort.","not-configured":"Auf Netlify ist noch kein Passwort hinterlegt: Project configuration → Environment variables → Variable MTC_ADMIN_PASSWORD anlegen, dann unter Deploys „Trigger deploy“.",
@@ -341,9 +343,14 @@ function renderAccess(){
   const c=ADM.created;
   $("#view").innerHTML=`${top}<div class="row"><h1>Zugänge</h1><span class="spacer"></span><span class="pill st-ok"><i></i>${act} aktiv</span><span class="pill st-bad"><i></i>${items.length-act} gesperrt</span></div>
   ${err?`<div class="flag alert"><i></i>${esc(err)}</div>`:""}
+  ${(()=>{const st=ADM.st||{enabled:false,legacyFree:true};return `<section class="card reply lockcard ${st.enabled?"on":""}"><span class="eyebrow">Sperre für die App</span>
+    <div class="row"><div style="flex:1;min-width:240px"><b style="font-size:18px">${st.enabled?"🔒 Eingeschaltet":"🔓 Ausgeschaltet"}</b><p class="muted small" style="margin:4px 0 0">${st.enabled?"Neue Nutzer brauchen einen Code. Bei Problemen hier einfach ausschalten – dann ist die App sofort wieder für alle offen.":"Die App ist offen für alle mit dem Link. Erstell zuerst die Codes und schick sie deinen Kunden – dann hier einschalten."}</p></div>
+    <button class="btn ${st.enabled?"":"primary"}" data-a="adm-toggle">${st.enabled?"Ausschalten":"Einschalten"}</button></div>
+    <label class="chk"><input type="checkbox" id="adm-legacy" ${st.legacyFree!==false?"checked":""}> Wer die App schon vor dem Einschalten benutzt hat, braucht keinen Code</label>
+    <p class="note" style="margin:0">Dein eigener Zugang: Gib in der App statt eines Codes einfach dein Admin-Passwort ein.</p></section>`})()}
   <section class="card reply"><span class="eyebrow">Neuen Kunden freischalten</span>
     <div class="row"><input class="input" id="adm-name" placeholder="Name, z. B. Max Muster" maxlength="40"><button class="btn primary" data-a="adm-create">Code erstellen</button></div>
-    ${c?`<div class="newcode"><span class="muted small">Code für ${esc(c.name)}</span><b class="code">${esc(c.code)}</b><div class="row"><button class="btn primary" data-a="adm-share" data-c="${esc(c.code)}">📤 An ${esc(c.name.split(" ")[0])} senden</button><button class="btn" data-a="adm-copy" data-c="${esc(c.code)}">Nur Code kopieren</button></div></div>`:""}
+    ${c?`<div class="newcode"><span class="muted small">Code für ${esc(c.name)}</span><b class="code">${esc(c.code)}</b><div class="row"><button class="btn primary" data-a="adm-share" data-c="${esc(c.code)}">📤 An ${esc(c.name.split(" ")[0])} senden</button><button class="btn" data-a="adm-copy" data-c="${esc(c.code)}">Link kopieren</button></div></div>`:""}
     <p class="note" style="margin:0">Jeder Code funktioniert auf max. ${ADM.max} Geräten. Gibt jemand ihn weiter, ist er „voll“ – und du siehst hier, auf welchen Geräten er läuft.</p></section>
   <section class="card" style="padding:0;overflow:hidden">${items.length?items.map(it=>{const st=it.blocked?["st-bad","gesperrt"]:it.devices.length?["st-ok","aktiv"]:["st-warn","noch nicht eingelöst"];const arm=ADM.arm===it.code;
     return `<div class="arow"><div class="ainfo"><b>${esc(it.name)}</b><span class="code sm">${esc(it.code)}</span><span class="muted small">${it.devices.length}/${ADM.max} Geräte${it.devices.length?" ("+it.devices.map(x=>esc(x.label)).join(", ")+")":""} · zuletzt aktiv: ${dd(it.lastSeen)} · erstellt: ${dd(it.created)}</span></div>
@@ -408,7 +415,9 @@ document.addEventListener("click",async e=>{const b=e.target.closest("[data-a]")
   else if(a==="adm-create"){const name=($("#adm-name").value||"").trim();if(!name){toast("Bitte einen Namen eingeben");return}b.disabled=true;
     try{const j=await adm("create",{name});if(j.ok){ADM.created=j.item;ADM.items.unshift(j.item);ADM.err=""}else admFail(j)}catch(e){ADM.err="net"}render()}
   else if(a==="adm-share"){const it=(ADM.items||[]).find(x=>x.code===b.dataset.c);if(it)shareOrCopy(shareText(it))}
-  else if(a==="adm-copy"){try{await navigator.clipboard.writeText(b.dataset.c);toast("📋 Code kopiert")}catch(e){prompt("Code:",b.dataset.c)}}
+  else if(a==="adm-copy"){const it=(ADM.items||[]).find(x=>x.code===b.dataset.c),u=it?inviteUrl(it):b.dataset.c;try{await navigator.clipboard.writeText(u);toast("📋 Link kopiert")}catch(e){prompt("Link:",u)}}
+  else if(a==="adm-toggle"){const on=!(ADM.st&&ADM.st.enabled);if(on&&!(ADM.items||[]).length&&!confirm("Du hast noch keine Codes erstellt. Trotzdem einschalten? Neue Nutzer kommen dann nicht mehr rein."))return;
+    b.disabled=true;try{const j=await adm("settings",{enabled:on});if(j.ok){ADM.st=j.settings;toast(on?"🔒 Sperre eingeschaltet":"🔓 Sperre ausgeschaltet – App ist offen")}else admFail(j)}catch(e){ADM.err="net"}render()}
   else if(a==="adm-block")admAction("block",b.dataset.c);
   else if(a==="adm-unblock")admAction("unblock",b.dataset.c);
   else if(a==="adm-reset")admAction("reset",b.dataset.c);
@@ -421,7 +430,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("[data-a]")
   else if(a==="paste"){try{const {c,old}=await importFromString($("#paste").value);view={id:c.id,range:30,delArmed:false};render();toast(old?"Dieser Link ist älter als der gespeicherte Stand":`✅ ${nameOf(c)} aktualisiert`)}catch(err){toast("Das ist kein gültiger Kunden-Link")}}
 });
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target.id==="adm-pw"||e.target.id==="adm-name")){e.preventDefault();const bt=document.querySelector(e.target.id==="adm-pw"?'[data-a="adm-login"]':'[data-a="adm-create"]');bt&&bt.click()}});
-document.addEventListener("change",e=>{if(e.target.id==="r-goals")$("#r-g").hidden=!e.target.checked});
+document.addEventListener("change",async e=>{if(e.target.id==="adm-legacy"){try{const j=await adm("settings",{legacyFree:e.target.checked});if(j.ok){ADM.st=j.settings;toast("Gespeichert")}}catch(err){toast("Nicht gespeichert – keine Verbindung")}return}if(e.target.id==="r-goals")$("#r-g").hidden=!e.target.checked});
 let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(render,200)});
 async function fromHash(){
   const h=location.hash||"";

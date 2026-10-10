@@ -19,13 +19,16 @@ Netlify → dein Projekt → **Project configuration → Environment variables �
 - Value: ein langes, eigenes Passwort
 Danach unter **Deploys → Trigger deploy → Deploy site**.
 
-## Kunden freischalten
-`…/coach.html` → **🔑 Zugänge** → mit dem Passwort anmelden → Name eingeben → **Code erstellen** → **An Kunden senden**.
-- Ein Code funktioniert auf max. 2 Geräten.
-- **Sperren** = Kunde kann die App nicht mehr öffnen (Einträge bleiben auf seinem Handy).
-- **Geräte zurücksetzen** = z. B. bei neuem Handy.
+## Freischalt-Codes (optional)
+`…/coach.html` → **🔑 Zugänge** → mit dem Passwort anmelden.
+1. Pro Kunde: Name eingeben → **Code erstellen** → **An Kunden senden** (WhatsApp-Text mit Link – der Kunde tippt ihn an und ist automatisch freigeschaltet).
+2. Wenn alle ihren Link haben: oben bei „Sperre für die App“ auf **Einschalten**.
 
-Freischaltung abschalten: in `index.html` im Abschnitt `CONFIG` `access:true` → `access:false`.
+Sicherheitsnetz:
+- Die Sperre ist **aus**, bis du sie einschaltest – und mit einem Klick wieder aus.
+- Ist der Server nicht erreichbar oder falsch eingerichtet, öffnet sich die App trotzdem.
+- Wer die App schon vor dem Einschalten benutzt hat, braucht keinen Code (abschaltbar).
+- Du selbst: in der App statt eines Codes einfach dein Admin-Passwort eingeben.
 
 ## Häufige Anpassungen (direkt auf github.com, Stift-Symbol)
 In `index.html` ganz oben im Abschnitt `CONFIG`:

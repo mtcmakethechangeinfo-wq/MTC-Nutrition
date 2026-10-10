@@ -480,7 +480,7 @@ const CONFIG={
   coachUrl:"coach.html", // Seite deines Coach-Dashboards (relativ zur App)
   whatsapp:"",
   email:"",
-  access:false,             // true = App nur mit persönlichem Freischalt-Code (Codes erstellst du im Coach-Dashboard → Zugänge)
+  access:true,              // Freischalt-Codes möglich. Ob die Sperre AKTIV ist, schaltest du im Coach-Dashboard → 🔑 Zugänge (Standard: aus). false = Funktion komplett aus
   accessApi:"api/access"
 };
 
@@ -1856,61 +1856,71 @@ function startModals(){
     <button class="btn primary wide" data-action="ob-start">Los geht’s</button><button class="text-btn" data-action="ob-later">Erst mal umschauen</button>`,true);
 }
 
-/* ---------- Freischaltung per persönlichem Code (Server: /api/access, Netlify Function) ---------- */
-const ACC_ERR={unknown:"Diesen Code gibt es nicht. Bitte prüfe die Schreibweise.",blocked:`Dieser Code ist gesperrt. Melde dich bitte bei ${CONFIG.coachName}.`,
-  devices:`Dieser Code ist schon auf 2 Geräten aktiv. ${CONFIG.coachName} kann das für dich zurücksetzen.`,"bad-request":"Bitte gib den ganzen Code ein."};
+/* ---------- Freischaltung per persönlichem Code (Server: /api/access, Netlify Function) ----------
+   Sicherheitsnetz: Gesperrt wird NUR, wenn der Server erreichbar ist UND der Coach die Sperre im Dashboard eingeschaltet hat.
+   Kunden bekommen einen Link mit Code → ein Tipp, fertig. Wer die App schon vorher genutzt hat, braucht keinen Code. */
+const ACC_ERR={unknown:"Diesen Code gibt es nicht. Bitte prüfe die Schreibweise.",blocked:`Dieser Code ist pausiert. Melde dich bitte bei ${CONFIG.coachName}.`,
+  devices:`Dieser Code ist schon auf 2 Geräten aktiv. ${CONFIG.coachName} kann das mit einem Klick zurücksetzen.`,"bad-request":"Bitte gib den ganzen Code ein."};
 function accDevice(){if(!S.deviceId){S.deviceId=uid()+uid();save()}return S.deviceId}
 function accLabel(){const u=navigator.userAgent;return /iPhone/.test(u)?"iPhone":/iPad/.test(u)?"iPad":/Android/.test(u)?"Android":/Macintosh/.test(u)?(navigator.maxTouchPoints>1?"iPad":"Mac"):/Windows/.test(u)?"Windows":"Gerät"}
-async function accessCall(action,code){const r=await fetch(CONFIG.accessApi,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action,code,device:accDevice(),label:accLabel()})});
-  let j=null;try{j=await r.json()}catch(e){}if(!j||typeof j.ok!=="boolean")throw new Error("http "+r.status);return j}
-function accessNeeded(){return !!CONFIG.access&&!(S.access&&S.access.ok)}
-function lockScreen(reason){
+async function accessCall(action,code,ms){const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),ms||8000);
+  try{const r=await fetch(CONFIG.accessApi,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action,code,device:accDevice(),label:accLabel()}),signal:ctl.signal});
+    let j=null;try{j=await r.json()}catch(e){}if(!j||typeof j.ok!=="boolean")throw new Error("http "+r.status);return j}finally{clearTimeout(t)}}
+function hasDataBefore(ts){if(!ts)return false;const k=keyOf(new Date(ts));return Object.keys(S.days).some(d=>d<k&&hasEntries(d))}
+function lockScreen(reason,prefill){
   const logo=CONFIG.logo?`<img class="m-logo" src="${CONFIG.logo}" alt="">`:"",coach=esc(CONFIG.coachName);
   const txt={blocked:`Dein Zugang ist gerade pausiert. Melde dich bei ${coach} – deine Einträge bleiben auf diesem Gerät gespeichert.`,
     "device-reset":"Dein Zugang wurde zurückgesetzt (z. B. wegen eines neuen Handys). Gib deinen Code einfach noch einmal ein.",
-    unknown:`Dein Zugang ist nicht mehr gültig. Melde dich bei ${coach}, wenn du weitermachen möchtest.`}[reason]||`Gib deinen persönlichen Freischalt-Code ein. Du bekommst ihn von ${coach}.`;
+    unknown:`Dein Zugang ist nicht mehr gültig. Melde dich bei ${coach}, wenn du weitermachen möchtest.`}[reason]
+    ||`Diese App gehört zu deinem Coaching bei ${coach}. Gib einmalig deinen persönlichen Code ein – du hast ihn per Nachricht bekommen.`;
   const ask="Hi! Ich brauche einen Freischalt-Code für die MTC Makro-App.";
   const contact=CONFIG.whatsapp?`<a class="text-btn" href="https://wa.me/${encodeURIComponent(CONFIG.whatsapp)}?text=${encodeURIComponent(ask)}" target="_blank" rel="noopener">Noch keinen Code? ${coach} schreiben</a>`
     :CONFIG.email?`<a class="text-btn" href="mailto:${encodeURIComponent(CONFIG.email)}?subject=${encodeURIComponent("Freischalt-Code")}&body=${encodeURIComponent(ask)}">Noch keinen Code? ${coach} schreiben</a>`:"";
-  modal(`${logo}<h3>${reason?"Zugang prüfen":`Willkommen bei ${esc(CONFIG.brand)}`}</h3><p>${txt}</p>
-    <label class="field" style="text-align:left"><span class="label">Freischalt-Code</span><input class="input code-in" id="acc-code" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="z. B. MAX-7K3P9Q" maxlength="20" value="${reason==="device-reset"&&S.access?esc(S.access.code||""):""}"></label>
+  const pre=prefill||(reason==="device-reset"&&S.access?S.access.code||"":"");
+  modal(`${logo}<h3>${reason?"Zugang prüfen":"Willkommen! 👋"}</h3><p>${txt}</p>
+    <label class="field" style="text-align:left"><span class="label">Dein Code</span><input class="input code-in" id="acc-code" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="z. B. MAX-7K3P9Q" maxlength="40" value="${esc(pre)}"></label>
     <p class="acc-msg" id="acc-msg" role="alert"></p>
-    <button class="btn primary wide" data-action="acc-go">Freischalten</button>${contact}
+    <button class="btn primary wide" data-action="acc-go">Los geht’s</button>${contact}
     ${reason&&Object.keys(S.days).some(hasEntries)?`<button class="text-btn" data-action="export-file">💾 Meine Einträge als Backup sichern</button>`:""}`,false);
   document.body.classList.add("locked");
 }
 let accBusy=false;
 async function accessRecheck(){
-  if(!CONFIG.access||!S.access||!S.access.ok||accBusy||navigator.onLine===false)return;
+  if(!CONFIG.access||!S.access||!S.access.ok||S.access.legacy||S.access.coach||accBusy||navigator.onLine===false)return;
   if(Date.now()-(S.access.ts||0)<2*864e5)return;
   accBusy=true;
   try{const j=await accessCall("check",S.access.code);
     if(j.ok){S.access.ts=Date.now();save()}
     else if(["unknown","blocked","device-reset"].includes(j.reason)){S.access={ok:false,code:S.access.code,reason:j.reason};save();if(sheet.open)closeSheet();lockScreen(j.reason)}}
-  catch(e){/* offline oder Server kurz weg: weiter nutzen */}
+  catch(e){/* offline oder Server kurz weg: einfach weiter nutzen */}
   accBusy=false;
 }
+function accessGranted(j,code){S.access={ok:true,code:j.coach?"":(j.code||String(code).toUpperCase()),ts:Date.now()};if(j.coach)S.access.coach=true;
+  if(!S.profile.name&&j.name)S.profile.name=String(j.name).split(" ")[0].slice(0,40);save()}
 async function accessActivate(btn){
   const inp=$("#acc-code"),msg=$("#acc-msg"),code=(inp.value||"").trim();
   if(code.replace(/[^A-Za-z0-9]/g,"").length<6){msg.textContent=ACC_ERR["bad-request"];inp.focus();return}
-  btn.disabled=true;msg.classList.add("wait");msg.textContent="Wird geprüft …";
+  if(btn)btn.disabled=true;msg.classList.add("wait");msg.textContent="Wird geprüft …";
   try{const j=await accessCall("activate",code);msg.classList.remove("wait");
-    if(j.ok){S.access={ok:true,code:j.code||code.toUpperCase(),ts:Date.now()};if(!S.profile.name&&j.name)S.profile.name=String(j.name).split(" ")[0].slice(0,40);save();
-      document.body.classList.remove("locked");closeModal();render();toast("✅ Freigeschaltet – viel Erfolg!");startModals();return}
+    if(j.ok){accessGranted(j,code);document.body.classList.remove("locked");closeModal();render();toast(j.coach?"✅ Coach-Zugang aktiv":"✅ Freigeschaltet – viel Erfolg!");startModals();return}
     msg.textContent=ACC_ERR[j.reason]||"Das hat nicht geklappt. Bitte prüfe den Code."}
   catch(e){msg.classList.remove("wait");msg.textContent="Keine Verbindung. Zum Freischalten brauchst du einmal kurz Internet."}
-  btn.disabled=false;
+  if(btn)btn.disabled=false;
 }
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")accessRecheck()});
-/* Sicherheitsnetz: Sperrbildschirm nur, wenn der Freischalt-Server wirklich antwortet.
-   Ist er nicht eingerichtet oder nicht erreichbar, startet die App normal – niemand wird ausgesperrt. */
 async function accessStart(){
-  if(!accessNeeded()){startModals();setTimeout(accessRecheck,1500);return}
-  let serverOk=false;
-  try{const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),5000);
-    const r=await fetch(CONFIG.accessApi,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"check",code:"PING",device:accDevice()}),signal:ctl.signal});clearTimeout(t);
-    const j=await r.json().catch(()=>null);serverOk=!!(j&&typeof j.ok==="boolean")}catch(e){}
-  if(serverOk)lockScreen(S.access&&S.access.reason||"");else startModals();
+  /* Code aus dem Einladungslink (…/#code=MAX-7K3P9Q) übernehmen */
+  let linkCode="";const m=(location.hash||"").match(/code=([A-Za-z0-9-]{6,40})/)||(location.search||"").match(/code=([A-Za-z0-9-]{6,40})/);
+  if(m){linkCode=decodeURIComponent(m[1]);clearHash();try{history.replaceState(null,"",location.pathname)}catch(e){}}
+  if(!CONFIG.access||(S.access&&S.access.ok)){startModals();setTimeout(accessRecheck,1500);return}
+  let st=null;try{st=await accessCall("status","",5000)}catch(e){}
+  if(!st||!st.enabled){ /* Sperre aus oder Server nicht erreichbar → App ganz normal öffnen */
+    startModals();
+    if(st&&linkCode){try{const j=await accessCall("activate",linkCode);if(j.ok)accessGranted(j,linkCode)}catch(e){}}
+    return}
+  if(st.legacyFree&&hasDataBefore(st.enabledAt)){S.access={ok:true,legacy:true,code:"",ts:Date.now()};save();startModals();return}
+  lockScreen(S.access&&S.access.reason||"",linkCode);
+  if(linkCode)accessActivate($('[data-action="acc-go"]'));
 }
 accessStart();
 
