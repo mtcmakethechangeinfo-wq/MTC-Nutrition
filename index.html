@@ -431,6 +431,13 @@ dialog#sheet::backdrop{background:rgba(2,4,8,.62);-webkit-backdrop-filter:blur(3
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.show.has-action{pointer-events:auto}
 #toast button{border:0;background:transparent;color:var(--accent-ink);font-weight:800;text-decoration:underline;padding:0;white-space:nowrap}
+.code-in{text-transform:uppercase;letter-spacing:.12em;font-weight:700;text-align:center;font-size:20px}
+.code-in::placeholder{letter-spacing:.06em;font-weight:500;text-transform:none}
+.acc-msg{min-height:1.3em;margin:0;color:var(--alert);font-size:14px}
+.acc-msg.wait{color:var(--ink-2)}
+body.locked .app{filter:blur(8px);pointer-events:none;user-select:none}
+.qpill.tpl{box-shadow:0 0 0 1px rgba(181,123,255,.5)}
+.tpl-in{width:78px;text-align:right;padding:8px 10px}
 #toast.in-sheet{position:absolute;top:auto;bottom:88px;transform:translateX(-50%) translateY(16px)}
 #toast.in-sheet.show{transform:translateX(-50%)}
 #toast span{min-width:0}
@@ -472,7 +479,9 @@ const CONFIG={
   coachName:"Coach Leo",
   coachUrl:"coach.html", // Seite deines Coach-Dashboards (relativ zur App)
   whatsapp:"",
-  email:""
+  email:"",
+  access:true,              // true = App nur mit persönlichem Freischalt-Code (Codes erstellst du im Coach-Dashboard → Zugänge)
+  accessApi:"api/access"
 };
 
 /* ---------- Lebensmittel (pro 100 g / 100 ml): name, kcal, P, KH, F, Portion, g ---------- */
@@ -679,7 +688,7 @@ const KEY="mtc-makrotracker-v1";
 const DEFAULT={v:2,profile:{name:"",sex:"m",age:30,height:180,weight:80,activity:1.55,goal:"halten",proteinPerKg:2,fatPct:28},
   goals:{kcal:2500,p:160,c:292,f:78,water:2800},restGoals:null,splitOn:false,trainDays:[1,3,5],goalsSet:false,
   days:{},weights:{},custom:[],recent:[],favs:[],waterStep:250,lastBackup:0,fibGoal:30,
-  adapt:{on:true,last:0,hist:[]},onboarded:false,ciDraft:{e:0,h:0,t:""},remind:{fruehstueck:"08:30",mittag:"13:00",abend:"19:30",snacks:"",weigh:"07:00",weighDays:"daily",checkin:true,nudges:true},lastAmt:{},ciSent:0,coachMsg:null};
+  adapt:{on:true,last:0,hist:[]},onboarded:false,ciDraft:{e:0,h:0,t:""},remind:{fruehstueck:"08:30",mittag:"13:00",abend:"19:30",snacks:"",weigh:"07:00",weighDays:"daily",checkin:true,nudges:true},lastAmt:{},ciSent:0,coachMsg:null,access:null,deviceId:"",mealTpls:[]};
 let storageOk=true;
 function clone(o){return JSON.parse(JSON.stringify(o))}
 function load(){try{const s=localStorage.getItem(KEY);return s?JSON.parse(s):null}catch(e){storageOk=false;return null}}
@@ -724,7 +733,8 @@ function haptic(ms){try{if(navigator.vibrate)navigator.vibrate(ms||8)}catch(e){}
 function modal(html,dismissable){const m=document.getElementById("modal");m.innerHTML=`<div class="modal-card" role="dialog" aria-modal="true" tabindex="-1">${html}</div>`;m.hidden=false;m.dataset.dismiss=dismissable?"1":"";try{m.firstChild.focus({preventScroll:true})}catch(e){}}
 function closeModal(){const m=document.getElementById("modal");m.hidden=true;m.innerHTML=""}
 document.addEventListener("click",e=>{const m=document.getElementById("modal");if(m&&!m.hidden&&e.target===m&&m.dataset.dismiss)closeModal()});
-document.addEventListener("keydown",e=>{const m=document.getElementById("modal");if(e.key==="Escape"&&m&&!m.hidden&&m.dataset.dismiss)closeModal()});
+document.addEventListener("keydown",e=>{const m=document.getElementById("modal");if(e.key==="Escape"&&m&&!m.hidden&&m.dataset.dismiss)closeModal();
+  if(e.key==="Enter"&&(e.target.id==="acc-code"||e.target.id==="tpl-name")){e.preventDefault();const bt=document.querySelector(e.target.id==="acc-code"?'[data-action="acc-go"]':'[data-action="tpl-save"]');if(bt)bt.click()}});
 let toastT;
 function toast(msg,action){const t=$("#toast");const host=(typeof sheet!=="undefined"&&sheet.open)?sheet:document.body;if(t.parentNode!==host)host.appendChild(t);t.classList.toggle("in-sheet",host!==document.body);t.innerHTML=`<span>${esc(msg)}</span>`+(action?`<button type="button">${esc(action.label)}</button>`:"");
   t.classList.add("show");t.classList.toggle("has-action",!!action);if(action)t.querySelector("button").onclick=()=>{action.fn();t.classList.remove("show")};
@@ -822,8 +832,10 @@ function renderHeute(){
   if(!tip&&isToday&&t.kcal>0&&new Date().getHours()>=14&&water<g.water*0.4)
     tip=`<section class="card tip"><span class="tip-ico" aria-hidden="true">💧</span><div><div class="t1">Erst <b>${fmt(water/1000,2)} l</b> getrunken – Zeit für ein Glas Wasser.</div><div class="t2"><button class="mini holo" data-action="water" data-d="1">+ ${S.waterStep} ml</button></div></div></section>`;
   const fq=frequentFoods(8);fq.forEach((f,i)=>QUICK.set("q"+i,{food:f,u:usual(f)}));
-  const pills=fq.length?`<p class="group-title"><span>Schnell eintragen</span><button data-action="fab">Alle</button></p>
-  <div class="pills">${fq.map((f,i)=>{const u=usual(f);return `<button class="qpill" data-action="quick-add" data-q="q${i}" aria-label="${esc(f.name)}, ${amtLabel(f,u)} hinzufügen"><span class="qn">${esc(shortName(f.name))}</span><small>${amtLabel(f,u)}</small><i aria-hidden="true">+</i></button>`}).join("")}</div>`:"";
+  const tp=tplsSorted().slice(0,4);tp.forEach((t,i)=>QUICK.set("t"+i,{tpl:t}));
+  const tpPills=tp.map((t,i)=>`<button class="qpill tpl" data-action="quick-add" data-q="t${i}" aria-label="${esc(t.name)} hinzufügen"><span class="qn">🍽️ ${esc(t.name)}</span><small>${fmt(tplTotals(t.items).kcal)} kcal</small><i aria-hidden="true">+</i></button>`).join("");
+  const pills=(fq.length||tp.length)?`<p class="group-title"><span>Schnell eintragen</span><button data-action="fab">Alle</button></p>
+  <div class="pills">${tpPills}${fq.map((f,i)=>{const u=usual(f);return `<button class="qpill" data-action="quick-add" data-q="q${i}" aria-label="${esc(f.name)}, ${amtLabel(f,u)} hinzufügen"><span class="qn">${esc(shortName(f.name))}</span><small>${amtLabel(f,u)}</small><i aria-hidden="true">+</i></button>`}).join("")}</div>`:"";
   $("#view").innerHTML=`
   <div class="lt-row"><div><h1 class="lt">${dayTitle(k)}</h1><p class="lt-sub">${longDate(k)}</p></div><div class="lt-nav">${!isToday?`<button class="pill-btn" data-action="day-today">Heute</button>`:""}<button class="round" data-action="week" data-d="-7" aria-label="Vorherige Woche">‹</button><button class="round" data-action="week" data-d="7" aria-label="Nächste Woche">›</button></div></div>
   ${weekStrip(k)}
@@ -857,8 +869,39 @@ function mealSection(m,list){
   const head=list.length?`<button class="mrow" data-action="meal-toggle" data-meal="${m.id}" aria-expanded="${open}"><span class="ico" aria-hidden="true">${m.emo}</span>${txt}<span class="chev" aria-hidden="true"></span></button>`
     :`<button class="mrow" data-action="add" data-meal="${m.id}"><span class="ico" aria-hidden="true">${m.emo}</span>${txt}<span></span></button>`;
   const acts=`<span class="m-acts">${!list.length&&y.length?`<button class="chip-btn" data-action="copy-meal" data-meal="${m.id}" title="Einträge von gestern übernehmen">🔁 Wie gestern</button>`:""}<button class="add-c" data-action="add" data-meal="${m.id}" aria-label="Zu ${m.label} hinzufügen">+</button></span>`;
-  return `<div class="meal-row ${open?"open":""}" id="meal-${m.id}"><div class="mrow-head">${head}${acts}</div>${open?`<ul class="entries">${items}</ul><div class="meal-foot"><button class="chip-btn" data-action="scan" data-meal="${m.id}">📷 Scannen</button><button class="chip-btn" data-action="add" data-meal="${m.id}">＋ Mehr hinzufügen</button></div>`:""}</div>`;
+  return `<div class="meal-row ${open?"open":""}" id="meal-${m.id}"><div class="mrow-head">${head}${acts}</div>${open?`<ul class="entries">${items}</ul><div class="meal-foot"><button class="chip-btn" data-action="scan" data-meal="${m.id}">📷 Scannen</button><button class="chip-btn" data-action="add" data-meal="${m.id}">＋ Mehr hinzufügen</button>${list.length>1?`<button class="chip-btn" data-action="tpl-new" data-meal="${m.id}">⭐ Als Mahlzeit merken</button>`:""}</div>`:""}</div>`;
 }
+
+/* ---------- Gemerkte Mahlzeiten (z. B. „Mein Abendbrot“): mehrere Lebensmittel mit einem Tipp ---------- */
+function tplItemN(it){return nutr(it.food,it.g)}
+function tplTotals(items){const t={kcal:0,p:0,c:0,f:0};items.forEach(it=>{if(!(it.g>0))return;const n=tplItemN(it);t.kcal+=n.kcal;t.p+=n.p;t.c+=n.c;t.f+=n.f});return t}
+function tplById(id){return (S.mealTpls||[]).find(t=>t.id===id)}
+function addTpl(t,meal,k,items){const d=getDay(k,true),ids=[];
+  (items||t.items).forEach(it=>{if(!(it.g>0))return;const e={id:uid(),meal,food:clone(it.food),g:Math.round(it.g*10)/10,unit:it.unit||"g"};if(it.quick)e.quick=true;d.entries.push(e);ids.push(e.id);if(!it.quick)pushRecent(e.food)});
+  const real=tplById(t.id);if(real)real.used=Date.now();save();return ids}
+function removeIds(k,ids){const d=getDay(k,true),s=new Set(ids);d.entries=d.entries.filter(x=>!s.has(x.id));save()}
+function tplsSorted(){return (S.mealTpls||[]).slice().sort((a,b)=>(b.used||0)-(a.used||0))}
+function tplUnit(it){return it.quick?"×":it.unit==="portion"&&it.food.portion?esc(it.food.portion.label.replace(/^1\s+/,"")):"g"}
+function tplShown(it){return it.quick?it.g/100:it.unit==="portion"&&it.food.portion?it.g/it.food.portion.g:it.g}
+function tplSaveModal(mealId){
+  const list=getDay(cur,false).entries.filter(e=>e.meal===mealId);if(!list.length)return;
+  const m=MEALS.find(x=>x.id===mealId),def=mealId==="abend"?"Mein Abendbrot":"Mein "+m.label;
+  modal(`<h3>⭐ Mahlzeit merken</h3><p>Speichert diese ${list.length} ${list.length===1?"Zutat":"Zutaten"} als feste Mahlzeit. Danach trägst du sie mit einem Tipp ein – die Mengen kannst du jedes Mal anpassen.</p>
+    <ul class="m-list" style="text-align:left">${list.map(e=>`<li><span>${esc(e.food.name)}</span><span class="muted small">${fmt(entryN(e).kcal)} kcal</span></li>`).join("")}</ul>
+    <label class="field" style="text-align:left"><span class="label">Name</span><input class="input" id="tpl-name" maxlength="40" value="${esc(def)}"></label>
+    <button class="btn primary wide" data-action="tpl-save" data-meal="${mealId}">Merken</button><button class="text-btn" data-action="cal-cancel">Abbrechen</button>`,true);
+  setTimeout(()=>{const i=$("#tpl-name");if(i){i.focus();i.select()}},50)}
+function tplSave(mealId){
+  const name=(($("#tpl-name")||{}).value||"").trim().slice(0,40);if(!name){toast("Bitte gib der Mahlzeit einen Namen");return}
+  const items=getDay(cur,false).entries.filter(e=>e.meal===mealId).map(e=>Object.assign({food:clone(e.food),g:e.g,unit:e.unit||"g"},e.quick?{quick:true}:{}));
+  if(!Array.isArray(S.mealTpls))S.mealTpls=[];S.mealTpls.unshift({id:"t"+uid(),name,meal:mealId,items,used:Date.now()});save();closeModal();render();
+  toast(`⭐ „${name}“ gemerkt – findest du unter „Schnell eintragen“`)}
+function tplRow(t){const tt=tplTotals(t.items);
+  return `<div class="frow"><button class="food" data-sh="tpl-open" data-id="${t.id}"><span class="fn">🍽️ ${esc(t.name)}</span><span class="fb">${t.items.length} ${t.items.length===1?"Teil":"Teile"} · ${fmt(tt.kcal)} kcal · P ${fmt(tt.p)} g</span></button><button class="add-c" data-sh="tpl-add" data-id="${t.id}" aria-label="${esc(t.name)} hinzufügen">+</button></div>`}
+function updTplPv(){const t=SH&&SH.tpl;if(!t)return;const tt=tplTotals(t.items);
+  const pv=$("#tpl-pv");if(pv)pv.innerHTML=`<div><b>${fmt(tt.kcal)}</b><small>kcal</small></div><div><b style="color:var(--p)">${fmt(tt.p)} g</b><small>Protein</small></div><div><b style="color:var(--c)">${fmt(tt.c)} g</b><small>KH</small></div><div><b style="color:var(--f)">${fmt(tt.f)} g</b><small>Fett</small></div>`;
+  t.items.forEach((it,i)=>{const el=$("#tk"+i);if(el)el.textContent=it.g>0?fmt(tplItemN(it).kcal)+" kcal":"weggelassen"});
+  const go=$("#tpl-go");if(go)go.textContent="Hinzufügen · "+fmt(tt.kcal)+" kcal"}
 
 /* ---------- VERLAUF ---------- */
 function periodRows(n,end){const keys=[];for(let i=n-1;i>=0;i--)keys.push(addDays(end,-i));return keys.map(k=>({k,t:dayTotals(k),g:goalsFor(k),n:(S.days[k]?.entries.length)||0,w:S.days[k]?.water||0}))}
@@ -1095,6 +1138,8 @@ function renderZiele(){
     <div><h3><i class="emo">🍲</i>Meine Lebensmittel & Rezepte</h3><p class="sub">Selbst angelegte Lebensmittel und Rezepte. Neue legst du beim Hinzufügen einer Mahlzeit an.</p></div>
     ${own.length?`<ul class="m-list">${own.map(f=>`<li><span><b>${esc(f.name)}</b> ${f.src==="recipe"?`<span class="src">Rezept</span>`:""}<br><span class="small muted">${fmt(f.kcal)} kcal · P ${fmtG(f.p)} · KH ${fmtG(f.c)} · F ${fmtG(f.f)} pro 100 g</span></span>
       <span class="inline-form" style="flex-wrap:nowrap"><button class="btn sm" data-action="edit-food" data-id="${esc(f.id)}">Bearbeiten</button><button class="btn ghost sm" data-action="del-food" data-id="${esc(f.id)}" aria-label="Löschen">✕</button></span></li>`).join("")}</ul>`:`<p class="muted small" style="margin:0">Noch nichts angelegt.</p>`}
+    <div><b>⭐ Gemerkte Mahlzeiten</b><p class="sub">Auf „Heute“ eine Mahlzeit aufklappen → „Als Mahlzeit merken“.</p></div>
+    ${(S.mealTpls||[]).length?`<ul class="m-list">${S.mealTpls.map(t=>`<li><span><b>${esc(t.name)}</b><br><span class="small muted">${t.items.length} Teile · ${fmt(tplTotals(t.items).kcal)} kcal · ${mealLabel(t.meal)}</span></span><button class="btn ghost sm" data-action="tpl-del" data-id="${t.id}" aria-label="Löschen">✕</button></li>`).join("")}</ul>`:`<p class="muted small" style="margin:0">Noch keine gemerkt.</p>`}
     <div class="inline-form"><button class="btn" data-action="new-recipe">🍲 Rezept erstellen</button><button class="btn" data-action="new-food">✏️ Lebensmittel anlegen</button></div>
   </section>
   `,
@@ -1315,7 +1360,9 @@ document.addEventListener("click",async e=>{
     case "goto-checkin":setTab("checkin");break;
     case "fab":openSheet({mode:"search",meal:mealNow(),target:"meal"});break;
     case "meal-toggle":{const id=b.dataset.meal;if(openMeals.has(id))openMeals.delete(id);else openMeals.add(id);render();break}
-    case "quick-add":{const q=QUICK.get(b.dataset.q);if(!q)break;const k=cur,meal=mealNow(),en=addEntry(q.food,q.u,meal,k);openMeals.add(meal);haptic(10);render();
+    case "quick-add":{const q=QUICK.get(b.dataset.q);if(!q)break;
+      if(q.tpl){const k=cur,meal=q.tpl.meal||mealNow(),ids=addTpl(q.tpl,meal,k);openMeals.add(meal);haptic(10);render();
+        toast(`✓ ${q.tpl.name} → ${mealLabel(meal)}`,{label:"Rückgängig",fn:()=>{removeIds(k,ids);render()}});break}const k=cur,meal=mealNow(),en=addEntry(q.food,q.u,meal,k);openMeals.add(meal);haptic(10);render();
       toast(`✓ ${q.food.name} → ${mealLabel(meal)}`,{label:"Rückgängig",fn:()=>{removeEntry(k,en.id);render()}});break}
     case "cal-add":calModal();break;
     case "cal-cancel":closeModal();break;
@@ -1370,6 +1417,11 @@ document.addEventListener("click",async e=>{
       copyText(url,"Link kopiert",ta);break}
     case "export-copy":{const txt=JSON.stringify(S);const ok=await copyText(txt,"Backup in die Zwischenablage kopiert");if(!ok){const t=$("#imp-text");t.value=txt;t.select()}else{S.lastBackup=Date.now();save()}break}
     case "export-file":exportFile();break;
+    case "tpl-new":tplSaveModal(b.dataset.meal);break;
+    case "tpl-save":tplSave(b.dataset.meal);break;
+    case "tpl-del":{const i=(S.mealTpls||[]).findIndex(t=>t.id===b.dataset.id);if(i<0)break;const [t]=S.mealTpls.splice(i,1);save();render();
+      toast(`„${t.name}“ gelöscht`,{label:"Rückgängig",fn:()=>{S.mealTpls.splice(i,0,t);save();render()}});break}
+    case "acc-go":accessActivate(b);break;
     case "import-text":importData($("#imp-text").value);break;
     case "reset":if(!resetArmed){resetArmed=true;render();break}resetArmed=false;S=clone(DEFAULT);save();cur=todayKey();render();toast("Alle Daten gelöscht");break;
     case "reset-cancel":resetArmed=false;render();break;
@@ -1468,6 +1520,16 @@ function renderSheet(){
     </div>
     <div class="sheet-foot">${SH.entryId?`<button class="btn danger" data-sh="delete">Löschen</button>`:`<button class="btn ghost" data-sh="back">Zurück</button>`}<button class="btn primary" data-sh="confirm" id="confirm-btn">Hinzufügen</button></div></div>`;
     updatePreview();
+  } else if(m==="tpl"){
+    const t=SH.tpl;
+    SB.innerHTML=`<div class="sheet">${head("🍽️ "+esc(t.name),"","Zu "+mealLabel(SH.meal))}
+    <div class="sheet-body"><p class="sub" style="margin:0">Passe die Mengen für heute an – z. B. weniger Scheiben. 0 = weglassen.</p>
+      <div class="list">${t.items.map((it,i)=>`<div class="frow" style="padding:8px 12px 8px 14px"><span style="min-width:0;display:grid"><span class="fn" style="font-weight:600;font-size:15px">${esc(it.food.name)}</span><span class="fb" id="tk${i}"></span></span><span class="inline-form" style="flex-wrap:nowrap;gap:6px"><input class="input tpl-in" inputmode="decimal" data-ti="${i}" value="${fmtAmt(Math.round(tplShown(it)*100)/100)}" aria-label="Menge ${esc(it.food.name)}"><span class="muted small" style="min-width:34px">${tplUnit(it)}</span></span></div>`).join("")}</div>
+      <div class="preview" id="tpl-pv"></div>
+      <label class="switch"><input type="checkbox" id="tpl-keep"> Diese Mengen in „${esc(t.name)}“ speichern</label>
+    </div>
+    <div class="sheet-foot"><button class="btn ghost" data-sh="back">Zurück</button><button class="btn primary" data-sh="tpl-confirm" id="tpl-go">Hinzufügen</button></div></div>`;
+    updTplPv();
   } else if(m==="scan"){
     SB.innerHTML=`<div class="sheet">${head("📷 Barcode scannen")}
     <div class="sheet-body">
@@ -1552,7 +1614,8 @@ function renderResults(){
   if(!q){
     const L=SH.list||"recent";let items=[],empty="",lab="";
     h+=`<div class="seg seg-full" aria-label="Listen">${LISTS.map(([id,l])=>`<button data-sh="list" data-l="${id}" aria-pressed="${L===id}">${l}</button>`).join("")}</div>`;
-    if(L==="recent"){items=S.recent.slice(0,25);if(!items.length){items=FOODS.filter(f=>POP.test(f.name));lab="Beliebt"}}
+    if(L==="recent"){items=S.recent.slice(0,25);if(!items.length){items=FOODS.filter(f=>POP.test(f.name));lab="Beliebt"}
+      const tps=meal?tplsSorted():[];if(tps.length)h+=`<div class="rgroup"><span class="label">⭐ Meine Mahlzeiten</span>${box(tps.map(tplRow).join(""))}</div>`}
     else if(L==="fav"){items=S.favs;empty=`<div class="status">Noch keine Favoriten. Tippe beim Eintragen auf ☆ – dann findest du das Lebensmittel hier.</div>`}
     else if(L==="recipe"){items=S.custom.filter(f=>f.src==="recipe");h+=`<div class="quick-row"><button class="btn sm" data-sh="recipe-new">🍲 Neues Rezept</button></div>`;empty=`<div class="status">Speichere Gerichte, die du öfter kochst (z. B. Meal-Prep). Dann trägst du eine Portion mit einem Tipp ein.</div>`}
     else {items=S.custom.filter(f=>f.src!=="recipe");h+=`<div class="quick-row"><button class="btn sm" data-sh="custom">✏️ Lebensmittel anlegen</button></div>`;empty=`<div class="status">Hier landen Lebensmittel, die du selbst anlegst – z. B. vom Bäcker oder aus der Kantine.</div>`}
@@ -1619,6 +1682,7 @@ sheet.addEventListener("input",e=>{
   if(id==="r-name")SH.recipe.name=e.target.value;
   if(id==="r-total"){SH.recipe.total=e.target.value;updateRecipeSum()}
   if(id==="r-portions"){SH.recipe.portions=e.target.value;updateRecipeSum()}
+  if(e.target.dataset&&e.target.dataset.ti!=null&&SH&&SH.tpl){const it=SH.tpl.items[+e.target.dataset.ti],v=num(e.target.value);if(it){const n=isNaN(v)?0:Math.max(0,v);it.g=it.quick?n*100:it.unit==="portion"&&it.food.portion?n*it.food.portion.g:n;updTplPv()}}
 });
 sheet.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="amt"){e.preventDefault();confirmEntry()}if(e.key==="Enter"&&e.target.id==="scan-code"){e.preventDefault();sheet.querySelector('[data-sh="scan-manual"]').click()}});
 /* ---------- Barcode-Scanner ---------- */
@@ -1737,7 +1801,14 @@ sheet.addEventListener("click",e=>{
     toast(`✓ ${f.name} hinzugefügt`,{label:"Rückgängig",fn:()=>{removeEntry(k,en.id);render();if(b.isConnected){b.classList.remove("on");b.textContent="+";b.disabled=false}}});break}
   case "off-retry":scheduleOff(true);renderResults();break;
   case "pick":{const f=pickMap.get(b.dataset.key);if(!f)return;SH.food=f;const hasP=f.portion&&f.portion.g;SH.unit=hasP?"portion":"g";SH.g=hasP?f.portion.g:100;SH.mode="detail";renderSheet();setTimeout(()=>{const i=$("#amt");i&&i.select()},30);break}
-  case "back":if(["detail","quick","custom","scan","scan-result"].includes(SH.mode)){stopScan();SH.mode="search";renderSheet();focusFirst()}break;
+  case "tpl-add":{const t=tplById(b.dataset.id);if(!t)return;const k=cur,meal=SH.meal,ids=addTpl(t,meal,k);openMeals.add(meal);haptic(10);b.classList.add("on");b.textContent="✓";b.disabled=true;render();
+    toast(`✓ ${t.name} hinzugefügt`,{label:"Rückgängig",fn:()=>{removeIds(k,ids);render();if(b.isConnected){b.classList.remove("on");b.textContent="+";b.disabled=false}}});break}
+  case "tpl-open":{const t=tplById(b.dataset.id);if(!t)return;SH.tpl=clone(t);SH.mode="tpl";renderSheet();break}
+  case "tpl-confirm":{const t=SH.tpl;if(!t.items.some(it=>it.g>0)){toast("Bitte mindestens eine Menge eingeben");return}
+    if($("#tpl-keep")&&$("#tpl-keep").checked){const real=tplById(t.id);if(real){real.items=clone(t.items.filter(it=>it.g>0))}}
+    const k=cur,meal=SH.meal,ids=addTpl(t,meal,k);openMeals.add(meal);closeSheet();render();haptic(10);
+    toast(`✓ ${t.name} hinzugefügt`,{label:"Rückgängig",fn:()=>{removeIds(k,ids);render()}});break}
+  case "back":if(["detail","quick","custom","scan","scan-result","tpl"].includes(SH.mode)){stopScan();SH.mode="search";renderSheet();focusFirst()}break;
   case "to-recipe":SH.mode="recipe";SH.target="meal";SH.query="";renderSheet();break;
   case "custom":SH.mode="custom";SH.editId=null;renderSheet();focusFirst();break;
   case "quick":SH.mode="quick";SH.quickVals=null;renderSheet();focusFirst();break;
@@ -1769,7 +1840,7 @@ sheet.addEventListener("click",e=>{
 let lastToday=todayKey();setInterval(()=>{const t=todayKey();if(t!==lastToday){if(cur===lastToday)cur=t;lastToday=t;if(!sheet.open)render()}},60000);
 
 renderBanner();render();
-(function startModals(){
+function startModals(){
   const logo=CONFIG.logo?`<img class="m-logo" src="${CONFIG.logo}" alt="">`:"";
   if(pendingCoach){const o=pendingCoach,pg=o.g,mt=o.m?String(o.m).slice(0,600):"";
     if(mt){S.coachMsg={t:mt,ts:Date.now()};save()}
@@ -1781,9 +1852,58 @@ renderBanner();render();
   const fresh=!S.goalsSet&&!S.onboarded&&!Object.keys(S.days).some(hasEntries);
   if(fresh)modal(`${logo}<h3>Willkommen bei ${esc(CONFIG.brand)} ${esc(CONFIG.brandSub)}</h3><p>Dein Makrotracker für das Coaching mit ${esc(CONFIG.coachName)}.</p>
     <ul class="m-steps"><li><span>🎯</span><div><b>Ziele einrichten</b><small>Einmal kurz rechnen lassen – dauert eine Minute.</small></div></li><li><span>📷</span><div><b>Essen eintragen</b><small>Suchen, Barcode scannen oder Rezepte speichern.</small></div></li><li><span>📤</span><div><b>Mit deinem Coach teilen</b><small>Einmal pro Woche per Link – deine Daten bleiben auf dem Handy.</small></div></li></ul>
-    <label class="field" style="text-align:left"><span class="label">Dein Vorname</span><input class="input" id="ob-name" maxlength="40" autocomplete="given-name" placeholder="z. B. Max"></label>
+    <label class="field" style="text-align:left"><span class="label">Dein Vorname</span><input class="input" id="ob-name" maxlength="40" autocomplete="given-name" placeholder="z. B. Max" value="${esc(S.profile.name||"")}"></label>
     <button class="btn primary wide" data-action="ob-start">Los geht’s</button><button class="text-btn" data-action="ob-later">Erst mal umschauen</button>`,true);
-})();
+}
+
+/* ---------- Freischaltung per persönlichem Code (Server: /api/access, Netlify Function) ---------- */
+const ACC_ERR={unknown:"Diesen Code gibt es nicht. Bitte prüfe die Schreibweise.",blocked:`Dieser Code ist gesperrt. Melde dich bitte bei ${CONFIG.coachName}.`,
+  devices:`Dieser Code ist schon auf 2 Geräten aktiv. ${CONFIG.coachName} kann das für dich zurücksetzen.`,"bad-request":"Bitte gib den ganzen Code ein."};
+function accDevice(){if(!S.deviceId){S.deviceId=uid()+uid();save()}return S.deviceId}
+function accLabel(){const u=navigator.userAgent;return /iPhone/.test(u)?"iPhone":/iPad/.test(u)?"iPad":/Android/.test(u)?"Android":/Macintosh/.test(u)?(navigator.maxTouchPoints>1?"iPad":"Mac"):/Windows/.test(u)?"Windows":"Gerät"}
+async function accessCall(action,code){const r=await fetch(CONFIG.accessApi,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action,code,device:accDevice(),label:accLabel()})});
+  let j=null;try{j=await r.json()}catch(e){}if(!j||typeof j.ok!=="boolean")throw new Error("http "+r.status);return j}
+function accessNeeded(){return !!CONFIG.access&&!(S.access&&S.access.ok)}
+function lockScreen(reason){
+  const logo=CONFIG.logo?`<img class="m-logo" src="${CONFIG.logo}" alt="">`:"",coach=esc(CONFIG.coachName);
+  const txt={blocked:`Dein Zugang ist gerade pausiert. Melde dich bei ${coach} – deine Einträge bleiben auf diesem Gerät gespeichert.`,
+    "device-reset":"Dein Zugang wurde zurückgesetzt (z. B. wegen eines neuen Handys). Gib deinen Code einfach noch einmal ein.",
+    unknown:`Dein Zugang ist nicht mehr gültig. Melde dich bei ${coach}, wenn du weitermachen möchtest.`}[reason]||`Gib deinen persönlichen Freischalt-Code ein. Du bekommst ihn von ${coach}.`;
+  const ask="Hi! Ich brauche einen Freischalt-Code für die MTC Makro-App.";
+  const contact=CONFIG.whatsapp?`<a class="text-btn" href="https://wa.me/${encodeURIComponent(CONFIG.whatsapp)}?text=${encodeURIComponent(ask)}" target="_blank" rel="noopener">Noch keinen Code? ${coach} schreiben</a>`
+    :CONFIG.email?`<a class="text-btn" href="mailto:${encodeURIComponent(CONFIG.email)}?subject=${encodeURIComponent("Freischalt-Code")}&body=${encodeURIComponent(ask)}">Noch keinen Code? ${coach} schreiben</a>`:"";
+  modal(`${logo}<h3>${reason?"Zugang prüfen":`Willkommen bei ${esc(CONFIG.brand)}`}</h3><p>${txt}</p>
+    <label class="field" style="text-align:left"><span class="label">Freischalt-Code</span><input class="input code-in" id="acc-code" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="z. B. MAX-7K3P9Q" maxlength="20" value="${reason==="device-reset"&&S.access?esc(S.access.code||""):""}"></label>
+    <p class="acc-msg" id="acc-msg" role="alert"></p>
+    <button class="btn primary wide" data-action="acc-go">Freischalten</button>${contact}
+    ${reason&&Object.keys(S.days).some(hasEntries)?`<button class="text-btn" data-action="export-file">💾 Meine Einträge als Backup sichern</button>`:""}`,false);
+  document.body.classList.add("locked");
+}
+let accBusy=false;
+async function accessRecheck(){
+  if(!CONFIG.access||!S.access||!S.access.ok||accBusy||navigator.onLine===false)return;
+  if(Date.now()-(S.access.ts||0)<2*864e5)return;
+  accBusy=true;
+  try{const j=await accessCall("check",S.access.code);
+    if(j.ok){S.access.ts=Date.now();save()}
+    else if(["unknown","blocked","device-reset"].includes(j.reason)){S.access={ok:false,code:S.access.code,reason:j.reason};save();if(sheet.open)closeSheet();lockScreen(j.reason)}}
+  catch(e){/* offline oder Server kurz weg: weiter nutzen */}
+  accBusy=false;
+}
+async function accessActivate(btn){
+  const inp=$("#acc-code"),msg=$("#acc-msg"),code=(inp.value||"").trim();
+  if(code.replace(/[^A-Za-z0-9]/g,"").length<6){msg.textContent=ACC_ERR["bad-request"];inp.focus();return}
+  btn.disabled=true;msg.classList.add("wait");msg.textContent="Wird geprüft …";
+  try{const j=await accessCall("activate",code);msg.classList.remove("wait");
+    if(j.ok){S.access={ok:true,code:j.code||code.toUpperCase(),ts:Date.now()};if(!S.profile.name&&j.name)S.profile.name=String(j.name).split(" ")[0].slice(0,40);save();
+      document.body.classList.remove("locked");closeModal();render();toast("✅ Freigeschaltet – viel Erfolg!");startModals();return}
+    msg.textContent=ACC_ERR[j.reason]||"Das hat nicht geklappt. Bitte prüfe den Code."}
+  catch(e){msg.classList.remove("wait");msg.textContent="Keine Verbindung. Zum Freischalten brauchst du einmal kurz Internet."}
+  btn.disabled=false;
+}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")accessRecheck()});
+if(accessNeeded())lockScreen(S.access&&S.access.reason||"");else{startModals();setTimeout(accessRecheck,1500)}
+
 })();
 </script>
 <script>if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost")){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}</script>

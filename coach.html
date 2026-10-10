@@ -173,10 +173,19 @@ textarea.input{min-height:84px;width:100%;resize:vertical;font:inherit;line-heig
 .sc .d{width:10px;height:10px;border-radius:50%}
 .sc .d.st-ok{background:var(--holo)}.sc .d.st-warn{background:var(--warn)}.sc .d.st-bad{background:var(--alert);box-shadow:0 0 8px rgba(255,122,133,.6)}.sc .d.st-old{background:var(--ink-2)}
 .dmain{display:flex;flex-direction:column;gap:16px;min-width:0}
+.arow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;padding:14px 16px;position:relative}
+.arow+.arow::before{content:"";position:absolute;top:0;left:16px;right:0;height:1px;background:var(--hair)}
+.ainfo{display:grid;gap:3px;min-width:0}
+.aacts{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap}
+.aacts .btn{min-height:34px;padding:6px 12px;font-size:13.5px}
+.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;font-weight:700;color:var(--holo)}
+.code.sm{font-size:13.5px}
+.newcode{display:grid;gap:8px;justify-items:start;background:var(--fill);border-radius:14px;padding:14px}
+.newcode .code{font-size:28px}
 </style>
 
 <div class="wrap">
-  <header class="top"><img id="logo" alt="" hidden><span class="brand" id="brand">MTC</span><span class="sub">Coach-Dashboard</span><span class="spacer"></span><a class="btn ghost small" href="./" style="text-decoration:none">← Zur App</a></header>
+  <header class="top"><img id="logo" alt="" hidden><span class="brand" id="brand">MTC</span><span class="sub">Coach-Dashboard</span><span class="spacer"></span><button class="btn ghost small" data-a="access">🔑 Zugänge</button><a class="btn ghost small" href="./" style="text-decoration:none">← Zur App</a></header>
   <main id="view" style="display:flex;flex-direction:column;gap:16px"></main>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -307,8 +316,44 @@ async function sendReply(c){
   try{await navigator.clipboard.writeText(txt);toast("📋 Link kopiert – jetzt an "+nameOf(c)+" schicken")}catch(e){prompt("Link kopieren:",url)}}
 
 /* ---------- Ansichten ---------- */
-let view={id:null,range:30,delArmed:false};
-function render(){view.id&&DB.clients[view.id]?renderDetail(DB.clients[view.id]):renderList()}
+let view={id:null,range:30,delArmed:false,mode:null};
+/* ---------- Zugänge (Freischalt-Codes) – Server: /api/access-admin ---------- */
+const ADM_KEY="mtc-coach-admin";
+const ADM={key:(()=>{try{return localStorage.getItem(ADM_KEY)||""}catch(e){return ""}})(),items:null,err:"",created:null,arm:null,max:2,busy:false};
+async function adm(action,extra){const r=await fetch("api/access-admin",{method:"POST",headers:{"content-type":"application/json","x-admin-key":ADM.key},body:JSON.stringify(Object.assign({action},extra||{}))});
+  let j=null;try{j=await r.json()}catch(e){}if(!j||typeof j.ok!=="boolean")throw new Error("net");return j}
+function admFail(j){ADM.err=j.reason||"x";if(j.reason==="auth"){ADM.key="";try{localStorage.removeItem(ADM_KEY)}catch(e){}}}
+async function admLoad(){ADM.busy=true;try{const j=await adm("list");if(j.ok){ADM.items=j.items;ADM.max=j.max||2;ADM.err="";try{localStorage.setItem(ADM_KEY,ADM.key)}catch(e){}}else admFail(j)}catch(e){ADM.err="net"}ADM.busy=false;render()}
+function appUrl(){return new URL("./",location.href).href}
+function shareText(it){return `Hi ${it.name.split(" ")[0]}! 💪 Hier ist dein Zugang zur MTC Makro-App:\n\n1️⃣ Öffnen: ${appUrl()}\n2️⃣ Code eingeben: ${it.code}\n3️⃣ Tipp: Teilen → „Zum Home-Bildschirm“ – dann ist sie wie eine echte App.\n\nDer Code ist persönlich und funktioniert auf max. ${ADM.max} Geräten.`}
+async function shareOrCopy(txt){if(navigator.share){try{await navigator.share({text:txt});return}catch(e){if(e&&e.name==="AbortError")return}}try{await navigator.clipboard.writeText(txt);toast("📋 Text kopiert – jetzt in WhatsApp einfügen")}catch(e){prompt("Text kopieren:",txt)}}
+function renderAccess(){
+  const ERR={auth:"Falsches Passwort.","not-configured":"Auf Netlify ist noch kein Passwort hinterlegt: Project configuration → Environment variables → Variable MTC_ADMIN_PASSWORD anlegen, dann unter Deploys „Trigger deploy“.",
+    net:"Server nicht erreichbar. Die Zugänge funktionieren nur auf der Netlify-Seite (nicht als lokale Datei).",unknown:"Diesen Code gibt es nicht mehr.",name:"Bitte einen Namen eingeben."};
+  const err=ADM.err?(ERR[ADM.err]||"Das hat nicht geklappt."):"";
+  const top=`<div class="row"><button class="btn ghost" data-a="back">← Kunden</button><span class="spacer"></span>${ADM.key&&ADM.items?`<button class="btn ghost" data-a="adm-logout">Abmelden</button>`:""}</div>`;
+  if(!ADM.key){$("#view").innerHTML=`${top}<h1>Zugänge</h1><section class="card reply" style="max-width:480px"><span class="eyebrow">Anmelden</span>
+    <p class="muted small" style="margin:0">Mit deinem Admin-Passwort (Netlify-Variable <b>MTC_ADMIN_PASSWORD</b>). Es bleibt nur auf diesem Gerät gespeichert.</p>
+    <input class="input" id="adm-pw" type="password" autocomplete="current-password" placeholder="Passwort">${err?`<div class="flag alert"><i></i>${esc(err)}</div>`:""}
+    <div class="row"><button class="btn primary" data-a="adm-login">Anmelden</button></div></section>`;setTimeout(()=>{const i=$("#adm-pw");i&&i.focus()},50);return}
+  if(!ADM.items){$("#view").innerHTML=`${top}<h1>Zugänge</h1>${err?`<div class="flag alert"><i></i>${esc(err)}</div><div class="row"><button class="btn" data-a="adm-retry">Erneut versuchen</button><button class="btn ghost" data-a="adm-logout">Abmelden</button></div>`:`<p class="muted">Lade Zugänge …</p>`}`;if(!err&&!ADM.busy)admLoad();return}
+  const items=ADM.items,act=items.filter(i=>!i.blocked).length,dd=ts=>ts?new Date(ts).toLocaleDateString("de-DE",{day:"numeric",month:"numeric",year:"2-digit"}):"–";
+  const c=ADM.created;
+  $("#view").innerHTML=`${top}<div class="row"><h1>Zugänge</h1><span class="spacer"></span><span class="pill st-ok"><i></i>${act} aktiv</span><span class="pill st-bad"><i></i>${items.length-act} gesperrt</span></div>
+  ${err?`<div class="flag alert"><i></i>${esc(err)}</div>`:""}
+  <section class="card reply"><span class="eyebrow">Neuen Kunden freischalten</span>
+    <div class="row"><input class="input" id="adm-name" placeholder="Name, z. B. Max Muster" maxlength="40"><button class="btn primary" data-a="adm-create">Code erstellen</button></div>
+    ${c?`<div class="newcode"><span class="muted small">Code für ${esc(c.name)}</span><b class="code">${esc(c.code)}</b><div class="row"><button class="btn primary" data-a="adm-share" data-c="${esc(c.code)}">📤 An ${esc(c.name.split(" ")[0])} senden</button><button class="btn" data-a="adm-copy" data-c="${esc(c.code)}">Nur Code kopieren</button></div></div>`:""}
+    <p class="note" style="margin:0">Jeder Code funktioniert auf max. ${ADM.max} Geräten. Gibt jemand ihn weiter, ist er „voll“ – und du siehst hier, auf welchen Geräten er läuft.</p></section>
+  <section class="card" style="padding:0;overflow:hidden">${items.length?items.map(it=>{const st=it.blocked?["st-bad","gesperrt"]:it.devices.length?["st-ok","aktiv"]:["st-warn","noch nicht eingelöst"];const arm=ADM.arm===it.code;
+    return `<div class="arow"><div class="ainfo"><b>${esc(it.name)}</b><span class="code sm">${esc(it.code)}</span><span class="muted small">${it.devices.length}/${ADM.max} Geräte${it.devices.length?" ("+it.devices.map(x=>esc(x.label)).join(", ")+")":""} · zuletzt aktiv: ${dd(it.lastSeen)} · erstellt: ${dd(it.created)}</span></div>
+      <span class="pill ${st[0]}"><i></i>${st[1]}</span>
+      <div class="aacts"><button class="btn" data-a="adm-share" data-c="${esc(it.code)}">📤 Senden</button>${it.blocked?`<button class="btn" data-a="adm-unblock" data-c="${esc(it.code)}">Entsperren</button>`:`<button class="btn" data-a="adm-block" data-c="${esc(it.code)}">Sperren</button>`}${it.devices.length?`<button class="btn" data-a="adm-reset" data-c="${esc(it.code)}">Geräte zurücksetzen</button>`:""}<button class="btn danger" data-a="adm-del" data-c="${esc(it.code)}">${arm?"Wirklich löschen?":"Löschen"}</button></div></div>`}).join(""):`<p class="muted" style="padding:16px;margin:0">Noch keine Zugänge. Erstelle oben den ersten Code.</p>`}</section>
+  <p class="note">Sperren: Der Kunde sieht beim nächsten Öffnen mit Internet (spätestens nach 2 Tagen) einen Sperrbildschirm – seine Einträge bleiben auf seinem Handy. Geräte zurücksetzen: z. B. bei neuem Handy; danach den Code einfach neu eingeben lassen.</p>`;
+}
+async function admAction(action,code){try{const j=await adm(action,{code});if(j.ok){if(action==="delete")ADM.items=ADM.items.filter(x=>x.code!==code);else ADM.items=ADM.items.map(x=>x.code===code?j.item:x);ADM.err="";
+    toast({block:"🔒 Gesperrt",unblock:"✅ Entsperrt",reset:"Geräte zurückgesetzt",delete:"Gelöscht"}[action])}else admFail(j)}catch(e){ADM.err="net"}ADM.arm=null;render()}
+function render(){if(view.mode==="access")return renderAccess();view.id&&DB.clients[view.id]?renderDetail(DB.clients[view.id]):renderList()}
 function pasteBox(){return `<section class="card" style="display:flex;flex-direction:column;gap:10px"><h3>🔗 Link von einem Kunden einfügen</h3><p class="muted small" style="margin:0">Öffnest du den Link direkt aus WhatsApp, landet der Kunde automatisch hier. Am Computer kannst du ihn auch einfügen.</p><div class="row"><input class="input" id="paste" placeholder="https://…/coach.html#c…" autocomplete="off"><button class="btn primary" data-a="paste">Übernehmen</button></div></section>`}
 function renderList(){
   const list=Object.values(DB.clients).map(c=>({c,st:status(c)})).sort((a,b)=>a.st.rank-b.st.rank||(b.c.lastTs-a.c.lastTs));
@@ -355,7 +400,19 @@ function renderDetail(c){
 }
 document.addEventListener("click",async e=>{const b=e.target.closest("[data-a]");if(!b)return;const a=b.dataset.a;
   if(a==="open"){view={id:b.dataset.id,range:30,delArmed:false};render();scrollTo({top:0})}
-  else if(a==="back"){view.id=null;render()}
+  else if(a==="back"){view.id=null;view.mode=null;render()}
+  else if(a==="access"){view.mode="access";view.id=null;ADM.err="";ADM.created=null;ADM.items=null;render();scrollTo({top:0})}
+  else if(a==="adm-login"){ADM.key=($("#adm-pw").value||"").trim();if(!ADM.key)return;ADM.items=null;ADM.err="";render()}
+  else if(a==="adm-retry"){ADM.err="";ADM.items=null;render()}
+  else if(a==="adm-logout"){ADM.key="";ADM.items=null;ADM.created=null;try{localStorage.removeItem(ADM_KEY)}catch(e){}render()}
+  else if(a==="adm-create"){const name=($("#adm-name").value||"").trim();if(!name){toast("Bitte einen Namen eingeben");return}b.disabled=true;
+    try{const j=await adm("create",{name});if(j.ok){ADM.created=j.item;ADM.items.unshift(j.item);ADM.err=""}else admFail(j)}catch(e){ADM.err="net"}render()}
+  else if(a==="adm-share"){const it=(ADM.items||[]).find(x=>x.code===b.dataset.c);if(it)shareOrCopy(shareText(it))}
+  else if(a==="adm-copy"){try{await navigator.clipboard.writeText(b.dataset.c);toast("📋 Code kopiert")}catch(e){prompt("Code:",b.dataset.c)}}
+  else if(a==="adm-block")admAction("block",b.dataset.c);
+  else if(a==="adm-unblock")admAction("unblock",b.dataset.c);
+  else if(a==="adm-reset")admAction("reset",b.dataset.c);
+  else if(a==="adm-del"){if(ADM.arm!==b.dataset.c){ADM.arm=b.dataset.c;render();return}admAction("delete",b.dataset.c)}
   else if(a==="reply"){const c=DB.clients[view.id];if(c)sendReply(c)}
   else if(a==="reply-focus"){const t=$("#r-msg");if(t){t.scrollIntoView({block:"center",behavior:"smooth"});t.focus({preventScroll:true})}}
   else if(a==="reply-goals"){const k=$("#r-goals");if(k){k.checked=true;$("#r-g").hidden=false;k.scrollIntoView({block:"center",behavior:"smooth"})}}
@@ -363,6 +420,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("[data-a]")
   else if(a==="del"){if(!view.delArmed){view.delArmed=true;render();return}delete DB.clients[view.id];save();view.id=null;view.delArmed=false;render();toast("Kunde entfernt")}
   else if(a==="paste"){try{const {c,old}=await importFromString($("#paste").value);view={id:c.id,range:30,delArmed:false};render();toast(old?"Dieser Link ist älter als der gespeicherte Stand":`✅ ${nameOf(c)} aktualisiert`)}catch(err){toast("Das ist kein gültiger Kunden-Link")}}
 });
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target.id==="adm-pw"||e.target.id==="adm-name")){e.preventDefault();const bt=document.querySelector(e.target.id==="adm-pw"?'[data-a="adm-login"]':'[data-a="adm-create"]');bt&&bt.click()}});
 document.addEventListener("change",e=>{if(e.target.id==="r-goals")$("#r-g").hidden=!e.target.checked});
 let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(render,200)});
 async function fromHash(){

@@ -1,4 +1,9 @@
-# Netlify: kein Build nötig – die Dateien werden direkt veröffentlicht.
+# Netlify: kein Build-Schritt – die Dateien werden direkt veröffentlicht.
+# Die Freischalt-Codes laufen als kleine Server-Funktionen (netlify/functions) mit Netlify Blobs als Speicher.
 [build]
   publish = "."
   command = ""
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"

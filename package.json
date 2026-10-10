@@ -1,0 +1,9 @@
+{
+  "name": "mtc-makrotracker",
+  "private": true,
+  "type": "module",
+  "description": "MTC Makrotracker – App, Coach-Dashboard und Freischalt-Codes (Netlify Functions)",
+  "dependencies": {
+    "@netlify/blobs": "^10.0.0"
+  }
+}
