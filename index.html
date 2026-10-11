@@ -1,4 +1,4 @@
-<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0a111b"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="MTC Makros"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" type="image/png" href="icons/icon-192.png"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><style>:root{color-scheme:dark;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>MTC Makrotracker</title>
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0a111b"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="MTC Makros"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="robots" content="noindex,nofollow"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" type="image/png" href="icons/icon-192.png"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><style>:root{color-scheme:dark;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>MTC Makrotracker</title>
 <style>
 @font-face{font-family:"Chakra Petch";font-style:normal;font-weight:600;font-display:swap;src:url(fonts/chakra-petch-latin-600-normal.woff2) format("woff2")}
 @font-face{font-family:"Chakra Petch";font-style:normal;font-weight:700;font-display:swap;src:url(fonts/chakra-petch-latin-700-normal.woff2) format("woff2")}
@@ -238,6 +238,8 @@ details>summary{list-style:none}
 .weigh-row{display:grid;grid-template-columns:34px 1fr auto auto;gap:10px;align-items:center;padding:10px 14px}
 .weigh-row .wr-label{font-weight:600}
 .weigh-row .input{width:84px;text-align:right;padding:9px 10px}
+.weigh-row .wr-label{min-width:0}
+@media (max-width:360px){.weigh-row{grid-template-columns:34px 1fr auto}.weigh-row .btn{grid-column:2/-1}.weigh-row .input{width:72px}}
 
 /* ---------- Eintragen (Bottom-Sheet) ---------- */
 dialog#sheet{border:0;padding:0;background:var(--bg);color:var(--ink);width:min(560px,calc(100vw - 16px));max-height:min(90vh,820px);border-radius:var(--r-lg);box-shadow:0 0 0 1px var(--hair),0 30px 80px rgba(0,0,0,.6);overflow:hidden}
@@ -438,6 +440,22 @@ dialog#sheet::backdrop{background:rgba(2,4,8,.62);-webkit-backdrop-filter:blur(3
 body.locked .app{filter:blur(8px);pointer-events:none;user-select:none}
 .qpill.tpl{box-shadow:0 0 0 1px rgba(181,123,255,.5)}
 .tpl-in{width:78px;text-align:right;padding:8px 10px}
+.resto-entry,.resto-build{display:grid;grid-template-columns:40px 1fr 12px;gap:12px;align-items:center;width:100%;border:0;text-align:left;color:var(--ink);background:var(--card);box-shadow:0 0 0 1px rgba(255,200,97,.35);border-radius:var(--r-md);padding:12px 14px}
+.resto-entry b,.resto-build b{display:block;font-size:15.5px}
+.resto-entry small,.resto-build small{display:block;color:var(--ink-2);font-size:13px;margin-top:1px}
+.resto-entry .ri{width:40px;height:40px;border-radius:12px;background:#3a2a0a;display:grid;place-items:center;font-size:21px}
+.resto-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.resto-tile{border:0;color:var(--ink);background:var(--card);box-shadow:0 0 0 1px var(--hair);border-radius:var(--r-md);padding:16px 12px;display:grid;justify-items:center;gap:6px;text-align:center}
+.resto-tile b{font-size:15.5px}.resto-tile small{color:var(--ink-2);font-size:12.5px}
+.resto-ico{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-size:27px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.resto-build .resto-ico{width:40px;height:40px;border-radius:12px;font-size:21px}
+.resto-note{font-size:12px;color:var(--ink-2);text-align:center;margin:4px 8px 0}
+.sub-opts{display:flex;flex-wrap:wrap;gap:8px}
+.tag.resto{background:rgba(255,200,97,.14);color:var(--warn)}
+.chain-view .tag.resto{display:none}
+.sheet-body{min-height:0}
+.sheet{max-height:min(90vh,820px)}
+@media (max-width:560px){.sheet{max-height:calc(92vh - env(safe-area-inset-bottom,0px))}}
 #toast.in-sheet{position:absolute;top:auto;bottom:88px;transform:translateX(-50%) translateY(16px)}
 #toast.in-sheet.show{transform:translateX(-50%)}
 #toast span{min-width:0}
@@ -902,6 +920,121 @@ function updTplPv(){const t=SH&&SH.tpl;if(!t)return;const tt=tplTotals(t.items);
   const pv=$("#tpl-pv");if(pv)pv.innerHTML=`<div><b>${fmt(tt.kcal)}</b><small>kcal</small></div><div><b style="color:var(--p)">${fmt(tt.p)} g</b><small>Protein</small></div><div><b style="color:var(--c)">${fmt(tt.c)} g</b><small>KH</small></div><div><b style="color:var(--f)">${fmt(tt.f)} g</b><small>Fett</small></div>`;
   t.items.forEach((it,i)=>{const el=$("#tk"+i);if(el)el.textContent=it.g>0?fmt(tplItemN(it).kcal)+" kcal":"weggelassen"});
   const go=$("#tpl-go");if(go)go.textContent="Hinzufügen · "+fmt(tt.kcal)+" kcal"}
+
+/* ---------- Restaurants & Fast Food: kuratierte Liste aus den offiziellen Nährwerttabellen der Ketten ----------
+   Werte pro Portion (wie auf der Karte): [Name, Kategorie, Portion, Gramm, kcal, Protein, KH, Fett]
+   RESTO_STAND bitte bei jeder Aktualisierung anpassen. */
+const RESTO_STAND="Stand Okt. 2026";
+/* Je Kette: Quelle (src) + Hinweis (note). Optional am Ende: Ballaststoffe, Zucker. */
+const RESTO=[
+ {id:"sub",name:"Subway",emo:"🥪",bg:"#0f2a14",builder:true,src:"Subway Nährwertinfo DE, März 2026",items:[
+  ["Chicken Teriyaki 15 cm","Subs (Standard)","1 Sub",227,270,22,38,3.3,3,10],["Chicken Fajita 15 cm","Subs (Standard)","1 Sub",209,250,21,36,2.6,3,8],
+  ["Rotisserie-Style Chicken 15 cm","Subs (Standard)","1 Sub",209,260,21,34,4,2.9,7.1],["Chicken Tandoori 15 cm","Subs (Standard)","1 Sub",199,388,26,39,14,2.8,10],
+  ["Dölicious Chicken 15 cm","Subs (Standard)","1 Sub",263,422,26,46,16,4.6,8.2],["Tuna 15 cm","Subs (Standard)","1 Sub",227,334,20,37,12,2.9,8],
+  ["Italian B.M.T. 15 cm","Subs (Standard)","1 Sub",217,369,21,36,16,3.2,7.6],["BBQ Rib 15 cm","Subs (Standard)","1 Sub",217,474,23,38,26,3.9,7.8],
+  ["Nacho Chicken 15 cm","Subs (Standard)","1 Sub",233,415,19,47,17,3.6,8.4],["Philly Beef & Cheese 15 cm","Subs (Standard)","1 Sub",221,304,20,39,7.2,3.3,9.7],
+  ["Ham 15 cm","Subs (Standard)","1 Sub",195,240,17,35,3.6,3.3,7.6],["Salami 15 cm","Subs (Standard)","1 Sub",169,254,12,35,7.6,2.9,7.1],
+  ["Veggie Delite 15 cm","Subs (vegetarisch/vegan)","1 Sub",165,231,11,35,5.5,2.9,7.4],["Spicy Vegan Patty 15 cm","Subs (vegetarisch/vegan)","1 Sub",238,301,21,44,9.6,6.5,9.2],
+  ["Smashed Falafel 15 cm","Subs (vegetarisch/vegan)","1 Sub",245,512,15,54,27,9.9,8.3],["Plant-based Chicken Teriyaki 15 cm","Subs (vegetarisch/vegan)","1 Sub",227,289,19,42,4.3,6.4,9.4],
+  ["Plant-based Dölicious Chicken 15 cm","Subs (vegetarisch/vegan)","1 Sub",262,413,25,49,13,8.8,7.7]]},
+ {id:"kfc",name:"KFC",emo:"🍗",bg:"#3a0a12",src:"KFC Deutschland Nährwerte, Stand 09/2026",items:[
+  ["Classic Zinger Burger","Burger","1 Burger",200,490,27,46,22,null,6],["Classic Original Burger","Burger","1 Burger",205,494,26,48,21,null,6],
+  ["Classic Veggie Burger","Burger","1 Burger",191,433,16,48,18,null,6],["Kentucky BBQ Zinger","Burger","1 Burger",233,518,29,51,21,null,13],
+  ["Kentucky BBQ Original","Burger","1 Burger",238,521,29,53,21,null,13],["Double Kentucky BBQ Zinger","Burger","1 Burger",335,782,52,59,37,null,14],
+  ["Double Kentucky BBQ Original","Burger","1 Burger",345,789,51,63,36,null,14],["Colonel Original Burger","Burger","1 Burger",243,567,29,49,28,null,9],
+  ["Original Recipe Brust","Chicken","1 Stück",110,234,23,9,12,null,1],["Original Recipe Oberkeule","Chicken","1 Stück",97,264,16,11,18,null,1],
+  ["Original Recipe Unterkeule","Chicken","1 Stück",52,122,11,4,7,null,0],["Original Recipe Rippe","Chicken","1 Stück",128,315,26,12,18,null,1],
+  ["Original Recipe Flügel","Chicken","1 Stück",89,245,21.4,8.9,13.8,null,0],["Hot Wing Oberflügel","Chicken","1 Stück",31,100,6,4,7,null,0],
+  ["Hot Wing Unterflügel","Chicken","1 Stück",21,66,4,2,4,null,0],["Crispy (1 Stück)","Chicken","1 Stück",41,97,8,4,5,null,0],
+  ["Crispys 3 Stück","Chicken","3 Stück",123,291,24,12,15,null,0],["Crispys 6 Stück","Chicken","6 Stück",246,582,48,24,30,null,0],
+  ["Original Bites","Chicken","1 Stück",25,58,5,3,3,null,0],["Zinger Chicken Filet","Chicken","1 Filet",91,226,20,8,12,null,0]]},
+ {id:"dd",name:"dean&david",emo:"🥗",bg:"#1d2a0c",src:"dean&david Nährwertübersicht, Aug. 2026",items:[
+  ["Paris Salat (ohne Dressing)","Salate","1 Salat",245,335,16.2,14,23.9,null,10.4],["Avocado Halloumi Salat","Salate","1 Salat",304,367,21.9,9,26.6,null,5.9],
+  ["Caesar Chicken Salat","Salate","1 Salat",294,312,28.8,16.5,14.3,null,3],["Chicken Vitality Salat","Salate","1 Salat",345,400,32.8,8.9,25.8,null,4.4],
+  ["Salmon Spring Salat","Salate","1 Salat",341,443,27.2,24.3,25.6,null,4.1],
+  ["Caesar Dressing","Dressings","1 Portion",80,234,1.2,5.4,23.2,null,4],["Honey Mustard Dressing","Dressings","1 Portion",80,384,0.6,8.8,38.4,null,7.7],
+  ["Salmon Avocado Bowl","Bowls","1 Bowl",488,806,27,69,45.5,null,8.2],["California Poke Bowl","Bowls","1 Bowl",516,1023,22.9,95.7,60.4,null,15.1],
+  ["Japanese Beef Bowl","Bowls","1 Bowl",540,1053,27.1,92,63.2,null,15.2],["Crunchy Chicken Bowl","Bowls","1 Bowl",533,785,29,74.6,39.8,null,20.3],
+  ["Chicken Teriyaki Bowl","Bowls","1 Bowl",505,680,24.8,94.3,21.7,null,16.6],["Avocado Chicken Bowl","Bowls","1 Bowl",491,571,23.3,58.7,26.4,null,6.4],
+  ["Veggie Buddha Bowl","Bowls","1 Bowl",558,883,19.6,90.2,48.3,null,24.7],["Vegan Falafel Bowl","Bowls","1 Bowl",534,696,15.5,75.4,35.5,null,13.4],
+  ["Korma Curry Chicken (mit Reis)","Curries","1 Portion",491,681,29.6,102.8,16,null,10.1],["Mango Chicken Curry","Curries","1 Portion",591,808,32.2,100.8,29.1,null,17],
+  ["Red Thai Chicken Curry","Curries","1 Portion",576,711,29.8,95.7,21.6,null,16.3],
+  ["Chicken Avocado Sandwich","Sandwiches & Wraps","1 Stück",253,422,18.9,53.4,13.2,null,4.3],["Smashed Avocado Chicken Sandwich","Sandwiches & Wraps","1 Stück",253,434,19,54.5,14,null,4.2],
+  ["Hot Kebab Wrap","Sandwiches & Wraps","1 Wrap",313,609,22.9,68.3,25,null,7.1],["Hot Chicken Teriyaki Wrap","Sandwiches & Wraps","1 Wrap",315,544,23.9,70,17,null,11],
+  ["Salmon Avocado Toast","Sandwiches & Wraps","1 Stück",141,261,10.8,26.3,11.5,null,1.1],
+  ["Açaí Sunrise Smoothie","Smoothies","0,4 l",420,216,3.5,44.6,1.2,null,40.4],["Mango Passion Smoothie","Smoothies","0,4 l",516,283,3.6,61.6,1,null,58.6],
+  ["Green Machine Smoothie","Smoothies","0,4 l",418,171,3.2,36.1,0.6,null,35.2]]},
+ {id:"nordsee",name:"NORDSEE",emo:"🐟",bg:"#0a1f3a",per100:true,src:"NORDSEE Produktseiten (Werte pro 100 g)",note:"NORDSEE gibt nur Werte pro 100 g an – tippe auf den Namen und gib die Menge in Gramm ein (z. B. Baguette ≈ 200 g, wenn du es nicht weißt).",items:[
+  ["Backfisch-Baguette","Baguettes","100 g",100,257,10,31,8.9,null,1.4],["Matjes-Baguette","Baguettes","100 g",100,179,7.7,22,6.2,null,1.6],
+  ["Bismarck-Baguette","Baguettes","100 g",100,185,9.7,24,5.4,null,1.8],["Seelachs-Ei-Baguette","Baguettes","100 g",100,214,10,23,8.5,null,1.1],
+  ["Garnelen-Ei-Baguette","Baguettes","100 g",100,189,11,22,6.3,null,1.4],["Classic Fish Burger","Burger & Boxen","100 g",100,219,11,26,7.4,null,5.1],
+  ["Fish & Chips","Burger & Boxen","100 g",100,218,6.6,30,7.4,null,0.6],["Shrimps & Chips","Burger & Boxen","100 g",100,214,5,30,7.3,null,0.8],
+  ["Garnelen-Box","Burger & Boxen","100 g",100,281,10,32,8,null,2.9],["Fish Nuggets Box","Burger & Boxen","100 g",100,253,13,26,9.5,null,1.2],
+  ["Pommes (NORDSEE)","Beilagen","100 g",100,201,3,33,6.2,null,0.2]]},
+ {id:"doener",name:"Döner & Imbiss",emo:"🥙",bg:"#3a1f0a",est:true,src:"Bundeslebensmittelschlüssel (BLS 4.0), Portionsgrößen geschätzt",note:"Döner ist überall etwas anders. Die Werte sind Durchschnittswerte – die Portion ist geschätzt (ca.). Weißt du das Gewicht, tippe auf den Namen und gib die Gramm ein.",items:[
+  ["Döner Kebab Hähnchen","Döner","ca. 1 Döner",400,796,52.4,72,31.6,6.4,4.4],["Döner Kebab Kalb/Rind","Döner","ca. 1 Döner",400,708,44.8,80,21.2,6.8,4.8],
+  ["Döner vegetarisch","Döner","ca. 1 Döner",380,551,16.3,49.4,29.6,5.3,7.2],["Falafel im Fladenbrot","Döner","ca. 1 Stück",350,546,18.9,49,27.3,9.8,6.3],
+  ["Lahmacun mit Grillfleisch","Lahmacun & Co.","ca. 1 Stück",350,651,31.9,59.5,29.8,7.7,7.4],["Lahmacun mit Salat","Lahmacun & Co.","ca. 1 Stück",300,549,24.6,54,24.3,6.9,6.3],
+  ["Gyros-Burger","Lahmacun & Co.","ca. 1 Stück",250,390,35.8,35,10.8,4,3.5]]}
+];
+/* Subway-Baukasten – offizielle Werte 15 cm (März 2026); 30 cm = doppelt. [Name, g, kcal, P, KH, F] */
+const SUB_PARTS={
+ bread:[["Italian",70,190,7,36,2.1],["Sesam",75,187,8,29,4],["Cheese Oregano",81,195,9.3,30,3.9],["Honey Oat",96,235,9.5,41,2.6],["Vollkorn",76,157,7.5,27,0.8],["Weizen-Wrap",95,276,6.7,48,5.7],["Glutenfrei",110,294,3.3,53,6.6]],
+ main:[["Chicken Teriyaki",74,81,13,4,1.3],["Rotisserie-Style Chicken",56,71,12,0.1,2],["Chicken Fajita",56,61,12,1.8,0.5],["Chicken Tandoori",71,89,18,1.8,1.4],["Dölicious Chicken",112,188,18,6.7,11.2],["Nacho Chicken",18,45,2.6,3.5,2.1],["Tuna (mit Lite Mayo)",74,145,12,2.5,10],["Philly Beef",71,86,11,8,1.4],["BBQ Rib",72,209,12,1.4,17],["Ham",28,34,5.4,0.7,1],["Salami",18,73,3.6,0.6,6.3],["Bacon",9,37,3,0.2,2.8],["Omelette",70,87,7.8,2.3,4.7],["Spicy Vegan Patty",85,169,11,10.2,8.8],["Falafel",45,113,3.2,12.9,6.5],["Plant-based Chicken Teriyaki",74,100,10,8.1,2.3],["Plant-based Dölicious Chicken",112,179,17.6,9.5,7.8]],
+ cheese:[["ohne Käse",0,0,0,0,0],["Scheibenkäse",12,42,2.3,0.4,3.5],["Mozzarella-Emmental",14,45,3.2,0.6,3.4],["Cheddar",11,46,2.8,0,3.8],["Frischkäse",14,28,1.2,0.5,2.2],["Vegan Slices",10,30,0,1.9,2.4]],
+ sauce:[["BBQ",14,21,0.1,4.9,0],["Caesar",14,50,0.4,1.2,4.8],["Chipotle Southwest",14,62,0.1,1.3,6.3],["X-spicy Chipotle",14,60,0.2,1.1,6.1],["Döner-Soße",14,33,0.2,1.8,2.6],["Honey Mustard",14,29,0.3,2.7,1.9],["Lite Mayo",14,46,0,0.6,4.9],["Joghurt",14,18,0.1,1.3,1.4],["Sweet Onion",14,23,0.1,5.6,0.1],["Garlic & Herb",14,22,0,4.9,0.2],["Cranberry",14,19,0,4.4,0],["Balsamico",3.5,1,0,0,0],["Olivenöl",3.5,32,0,0,3.5]],
+ veg:[81,15,0.8,2.7,0.1]};
+const RESTO_FOODS=[];
+RESTO.forEach(ch=>ch.items.forEach(([n,cat,pl,g,kcal,p,c,f,fib,sug],i)=>{const k=100/g,r=v=>+(v*k).toFixed(1),o={id:"r_"+ch.id+i,name:n,brand:ch.name,cat,kcal:r(kcal),p:r(p),c:r(c),f:r(f),src:"resto",chain:ch.id};
+  if(fib!=null)o.fib=r(fib);if(sug!=null)o.sug=r(sug);if(!ch.per100)o.portion={label:pl,g};RESTO_FOODS.push(o)}));
+RESTO_FOODS.forEach(f=>f.n=norm(f.name+" "+f.brand));
+function restoChain(id){return RESTO.find(c=>c.id===id)}
+function subState(){if(!SH.sub)SH.sub={size:15,bread:0,main:0,cheese:0,sauce:[],veg:true};return SH.sub}
+function subTotals(){const s=subState(),m=s.size===30?2:1,t={g:0,kcal:0,p:0,c:0,f:0};
+  const add=a=>{t.g+=a[0]*m;t.kcal+=a[1]*m;t.p+=a[2]*m;t.c+=a[3]*m;t.f+=a[4]*m};
+  add(SUB_PARTS.bread[s.bread].slice(1));add(SUB_PARTS.main[s.main].slice(1));add(SUB_PARTS.cheese[s.cheese].slice(1));s.sauce.forEach(i=>add(SUB_PARTS.sauce[i].slice(1)));if(s.veg)add(SUB_PARTS.veg);return t}
+function subName(){const s=subState();return `Sub: ${SUB_PARTS.main[s.main][0]} · ${SUB_PARTS.bread[s.bread][0]} · ${s.size} cm`}
+function subFood(){const t=subTotals(),k=100/t.g,s=subState();
+  const extra=[s.cheese?SUB_PARTS.cheese[s.cheese][0]:"",...s.sauce.map(i=>SUB_PARTS.sauce[i][0])].filter(Boolean).join(", ");
+  return {name:subName()+(extra?" ("+extra+")":""),brand:"Subway",kcal:+(t.kcal*k).toFixed(1),p:+(t.p*k).toFixed(1),c:+(t.c*k).toFixed(1),f:+(t.f*k).toFixed(1),portion:{label:`1 Sub (${s.size} cm)`,g:Math.round(t.g)},src:"resto"}}
+function updSub(){const t=subTotals(),pv=$("#sub-pv");if(pv)pv.innerHTML=`<div><b>${fmt(t.kcal)}</b><small>kcal</small></div><div><b style="color:var(--p)">${fmt(t.p)} g</b><small>Protein</small></div><div><b style="color:var(--c)">${fmt(t.c)} g</b><small>KH</small></div><div><b style="color:var(--f)">${fmt(t.f)} g</b><small>Fett</small></div>`;
+  const go=$("#sub-go");if(go)go.textContent="Hinzufügen · "+fmt(t.kcal)+" kcal";const nm=$("#sub-name");if(nm)nm.textContent=subName()}
+function restoNote(ch){return ch?`<p class="resto-note">Quelle: ${esc(ch.src)}. ${ch.est?"":"Extra-Soßen oder größere Portionen ändern die Zahl."}</p>`
+  :`<p class="resto-note">Werte aus den offiziellen Nährwertangaben der Ketten (${esc(RESTO_STAND)}), Döner aus dem Bundeslebensmittelschlüssel. Markennamen nur zur Orientierung – keine Kooperation mit den Ketten.</p>`}
+function renderResto(){
+  const m=SH.mode,eb=SH.target==="meal"?"Zu "+mealLabel(SH.meal):"";
+  if(m==="resto"){
+    SB.innerHTML=`<div class="sheet">${head("Restaurants",``,eb)}
+    <div class="sheet-body"><div class="resto-grid">${RESTO.map(ch=>`<button class="resto-tile" data-sh="chain" data-c="${ch.id}"><span class="resto-ico" style="background:${ch.bg}">${ch.emo}</span><b>${esc(ch.name)}</b><small>${ch.items.length} Gerichte${ch.builder?" + Baukasten":""}${ch.per100?" · pro 100 g":""}</small></button>`).join("")}</div>
+      <p class="hint" style="text-align:center">Tipp: Du kannst auch oben in der Suche einfach „Zinger“ oder „Teriyaki“ eingeben.</p>${restoNote()}</div>
+    <div class="sheet-foot"><button class="btn ghost" data-sh="back">Zurück</button></div></div>`;
+  } else if(m==="chain"){
+    const ch=restoChain(SH.chain),cats=[...new Set(ch.items.map(x=>x[1]))];pickMap.clear();
+    const foods=RESTO_FOODS.filter(f=>f.chain===ch.id);
+    SB.innerHTML=`<div class="sheet">${head(`${ch.emo} ${esc(ch.name)}`,``,eb)}
+    <div class="sheet-body chain-view">
+      ${ch.builder?`<button class="resto-build" data-sh="sub"><span class="resto-ico" style="background:${ch.bg}">🥪</span><span><b>Sub selbst zusammenstellen</b><small>Brot, Belag, Käse & Soße wählen – die App rechnet</small></span><span class="chev"></span></button>`:""}
+      <p class="hint">${ch.note?esc(ch.note):"Tippe auf + für 1 Portion – oder auf den Namen, um die Menge anzupassen"}</p>
+      ${cats.map(cat=>`<div class="rgroup"><span class="label">${esc(cat)}</span><div class="list">${foods.filter(f=>f.cat===cat).map(f=>foodRow(f,f.id)).join("")}</div></div>`).join("")}
+      ${restoNote(ch)}</div>
+    <div class="sheet-foot"><button class="btn ghost" data-sh="resto">‹ Alle Restaurants</button></div></div>`;
+  } else if(m==="sub"){
+    const s=subState(),pill=(grp,i,label,on)=>`<button class="mpill" data-sh="sub-pick" data-g="${grp}" data-i="${i}" aria-pressed="${on}">${esc(label)}</button>`;
+    SB.innerHTML=`<div class="sheet">${head("🥪 Sub zusammenstellen","",eb)}
+    <div class="sheet-body">
+      <div class="seg seg-full"><button data-sh="sub-pick" data-g="size" data-i="15" aria-pressed="${s.size===15}">15 cm</button><button data-sh="sub-pick" data-g="size" data-i="30" aria-pressed="${s.size===30}">30 cm</button></div>
+      <div class="field"><span class="label">Brot</span><div class="sub-opts">${SUB_PARTS.bread.map((x,i)=>pill("bread",i,x[0],s.bread===i)).join("")}</div></div>
+      <div class="field"><span class="label">Belag</span><div class="sub-opts">${SUB_PARTS.main.map((x,i)=>pill("main",i,x[0],s.main===i)).join("")}</div></div>
+      <div class="field"><span class="label">Käse</span><div class="sub-opts">${SUB_PARTS.cheese.map((x,i)=>pill("cheese",i,x[0],s.cheese===i)).join("")}</div></div>
+      <div class="field"><span class="label">Soßen <small class="muted">(mehrere möglich)</small></span><div class="sub-opts">${SUB_PARTS.sauce.map((x,i)=>pill("sauce",i,x[0],s.sauce.includes(i))).join("")}</div></div>
+      <label class="switch"><input type="checkbox" id="sub-veg" ${s.veg?"checked":""}> Salat & Gemüse (≈ ${SUB_PARTS.veg[1]*(s.size===30?2:1)} kcal)</label>
+      <div class="card" style="padding:12px 14px"><div class="muted small" id="sub-name"></div></div>
+      <div class="preview" id="sub-pv"></div>
+      ${restoNote(restoChain("sub"))}</div>
+    <div class="sheet-foot"><button class="btn ghost" data-sh="chain-back">Zurück</button><button class="btn primary" data-sh="sub-add" id="sub-go">Hinzufügen</button></div></div>`;
+    updSub();
+  }
+}
 
 /* ---------- VERLAUF ---------- */
 function periodRows(n,end){const keys=[];for(let i=n-1;i>=0;i--)keys.push(addDays(end,-i));return keys.map(k=>({k,t:dayTotals(k),g:goalsFor(k),n:(S.days[k]?.entries.length)||0,w:S.days[k]?.water||0}))}
@@ -1520,6 +1653,7 @@ function renderSheet(){
     </div>
     <div class="sheet-foot">${SH.entryId?`<button class="btn danger" data-sh="delete">Löschen</button>`:`<button class="btn ghost" data-sh="back">Zurück</button>`}<button class="btn primary" data-sh="confirm" id="confirm-btn">Hinzufügen</button></div></div>`;
     updatePreview();
+  } else if(m==="resto"||m==="chain"||m==="sub"){renderResto();
   } else if(m==="tpl"){
     const t=SH.tpl;
     SB.innerHTML=`<div class="sheet">${head("🍽️ "+esc(t.name),"","Zu "+mealLabel(SH.meal))}
@@ -1602,7 +1736,7 @@ function renderSheet(){
 function updateRecipeSum(){const el=$("#r-sum");if(!el)return;const rc=SH.recipe,t=recipeTotals(rc);const tg=num(rc.total)>0?num(rc.total):t.g,pn=Math.max(1,Math.round(num(rc.portions)||1));
   el.innerHTML=rc.items.length?`<div class="label" style="margin-bottom:6px">Pro Portion (${fmt(tg/pn)} g)</div><div class="preview"><div><small>Kalorien</small><b>${fmt(t.kcal/pn)}</b></div><div><small><span class="dot p"></span>Protein</small><b>${fmtG(t.p/pn)} g</b></div><div><small><span class="dot c"></span>KH</small><b>${fmtG(t.c/pn)} g</b></div><div><small><span class="dot f"></span>Fett</small><b>${fmtG(t.f/pn)} g</b></div></div>
   <p class="sub">Gesamt: ${fmt(t.kcal)} kcal · ${fmt(tg)} g · pro 100 g: ${fmt(t.kcal/tg*100)} kcal</p>`:""}
-function srcTag(f){return f.src==="bls"?`<span class="tag holo">BLS</span>`:f.src==="off"?`<span class="tag">online</span>`:f.src==="custom"?`<span class="tag">eigenes</span>`:f.src==="recipe"?`<span class="tag">Rezept</span>`:""}
+function srcTag(f){return f.src==="resto"?`<span class="tag resto">Restaurant</span>`:f.src==="bls"?`<span class="tag holo">BLS</span>`:f.src==="off"?`<span class="tag">online</span>`:f.src==="custom"?`<span class="tag">eigenes</span>`:f.src==="recipe"?`<span class="tag">Rezept</span>`:""}
 function foodRow(f,key){pickMap.set(key,f);const u=usual(f),n=nutr(f,u.g);
   return `<div class="frow"><button class="food" data-sh="pick" data-key="${key}"><span class="fn">${esc(f.name)}${isFav(f)?`<span class="tag fav">★</span>`:""}${srcTag(f)}</span><span class="fb">${f.brand?esc(f.brand)+" · ":""}${amtLabel(f,u)} · ${fmt(n.kcal)} kcal · P ${fmtG(n.p)} g</span></button><button class="add-c" data-sh="qadd" data-key="${key}" aria-label="${esc(f.name)}, ${amtLabel(f,u)} hinzufügen">+</button></div>`}
 function sameFood(a,b){return fkey(a)===fkey(b)}
@@ -1613,6 +1747,7 @@ function renderResults(){
   const hint=`<p class="hint">${meal?"Tippe auf + für die übliche Menge – oder auf den Namen, um die Menge anzupassen":"Tippe auf +, um die Zutat zu übernehmen"}</p>`;
   if(!q){
     const L=SH.list||"recent";let items=[],empty="",lab="";
+    if(meal)h+=`<button class="resto-entry" data-sh="resto"><span class="ri" aria-hidden="true">🍔</span><span><b>Restaurants & Fast Food</b><small>${RESTO.map(c=>esc(c.name)).join(" · ")}</small></span><span class="chev" aria-hidden="true"></span></button>`;
     h+=`<div class="seg seg-full" aria-label="Listen">${LISTS.map(([id,l])=>`<button data-sh="list" data-l="${id}" aria-pressed="${L===id}">${l}</button>`).join("")}</div>`;
     if(L==="recent"){items=S.recent.slice(0,25);if(!items.length){items=FOODS.filter(f=>POP.test(f.name));lab="Beliebt"}
       const tps=meal?tplsSorted():[];if(tps.length)h+=`<div class="rgroup"><span class="label">⭐ Meine Mahlzeiten</span>${box(tps.map(tplRow).join(""))}</div>`}
@@ -1627,7 +1762,7 @@ function renderResults(){
     const match=f=>{const s=norm(f.name+" "+(f.brand||""));return words.every(w=>s.includes(w))};
     const score=f=>{const n=norm(f.name);let s=0;if(n.startsWith(words[0]))s-=3;else if(new RegExp("(^|[\\s(/-])"+escRe(words[0])).test(n))s-=2;if(isFav(f))s-=4;if(f.src!=="db")s-=1;if(POP.test(f.name))s-=1.5;return s+n.length/100};
     const local=[];const push=f=>{if(!local.some(x=>sameFood(x,f)))local.push(f)};
-    [...S.favs,...S.custom,...S.recent,...FOODS].filter(match).forEach(push);local.sort((a,b)=>score(a)-score(b));
+    [...S.favs,...S.custom,...S.recent,...RESTO_FOODS,...FOODS].filter(match).forEach(push);local.sort((a,b)=>score(a)-score(b));
     h+=local.length?`<div class="rgroup"><span class="label">Treffer</span>${box(local.slice(0,40).map((f,i)=>foodRow(f,"l"+i)).join(""))}</div>`:`<div class="status">Nichts in deiner Liste gefunden. <button class="btn sm" data-sh="custom">✏️ Selbst anlegen</button></div>`;
     if(BLS){const w0=words[0],re0=new RegExp("(^|[\\s(/,-])"+escRe(w0));
       const bh=BLS.filter(f=>words.every(w=>f.n.includes(w))).map(f=>({f,s:(f.n.startsWith(w0)?0:re0.test(f.n)?1:2)*1000+f.n.length+(f.n.split(",").length-1)*8})).sort((a,b)=>a.s-b.s).slice(0,25);
@@ -1658,7 +1793,9 @@ async function offFetch(q,signal){
   let r=null;
   /* 1. Über die eigene Weiterleitung (_redirects) – umgeht die CORS-Sperre von Open Food Facts */
   try{r=await fetch(`api/off-search?${qs}`,{signal,headers:{Accept:"application/json"}});const ct=r.headers.get("content-type")||"";if(!r.ok||!ct.includes("json"))r=null}catch(e){if(signal.aborted)throw e;r=null}
-  /* 2. Direkt (klappt nur, falls Open Food Facts CORS erlaubt) */
+  /* 2. Direkt über die klassische Suche von Open Food Facts (erlaubt Aufrufe aus dem Browser – klappt auch ohne Netlify, z. B. auf GitHub Pages) */
+  if(!r){try{const r2=await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=30&lc=de&fields=${OFF_FIELDS}`,{signal});if(r2.ok)r=r2}catch(e){if(signal.aborted)throw e}}
+  /* 3. Letzter Versuch: neue Such-API direkt */
   if(!r)r=await fetch(`https://search.openfoodfacts.org/search?${qs}`,{signal});
   if(!r.ok)throw new Error("http "+r.status);
   const j=await r.json();
@@ -1735,7 +1872,7 @@ async function onBarcode(code){
   catch(e){if(!SH)return;SH.scanRes={error:navigator.onLine===false?"Du bist offline. Der Barcode kann erst mit Internet nachgeschlagen werden.":"Open Food Facts ist gerade nicht erreichbar. Versuch es gleich nochmal."};renderSheet()}
 }
 function openFood(f){SH.food=f;const hasP=f.portion&&f.portion.g;SH.unit=hasP?"portion":"g";SH.g=hasP?f.portion.g:100;SH.mode="detail";renderSheet();setTimeout(()=>{const i=$("#amt");i&&i.select()},30)}
-sheet.addEventListener("change",e=>{if(e.target.id==="scan-photo"&&e.target.files[0])scanPhoto(e.target.files[0])});
+sheet.addEventListener("change",e=>{if(e.target.id==="sub-veg"){subState().veg=e.target.checked;updSub();return}if(e.target.id==="scan-photo"&&e.target.files[0])scanPhoto(e.target.files[0])});
 function impactHtml(n){const t=dayTotals(cur),g=goalsFor(cur);let old={kcal:0,p:0,c:0,f:0,fib:0};
   if(SH.entryId){const e=getDay(cur,false).entries.find(x=>x.id===SH.entryId);if(e)old=entryN(e)}
   const row=(label,key,goal,unit,color,okFn)=>{const b=Math.max(0,t[key]-old[key]),a=b+n[key],mx=Math.max(goal,a,1),ok=okFn(a,goal),over=key==="kcal"&&a>goal*1.05;
@@ -1795,12 +1932,19 @@ sheet.addEventListener("click",e=>{
   case "scan-manual":{const c=($("#scan-code").value||"").replace(/\D/g,"");if(c.length<8){toast("Bitte die ganze Barcode-Nummer eingeben (8–14 Ziffern)");return}stopScan();onBarcode(c);break}
   case "custom-code":SH.pendingCode=SH.scanCode;SH.mode="custom";SH.editId=null;SH.query="";renderSheet();focusFirst();break;
   case "list":SH.list=b.dataset.l;renderResults();break;
+  case "resto":SH.mode="resto";renderSheet();break;
+  case "chain":SH.chain=b.dataset.c;SH.mode="chain";renderSheet();break;
+  case "chain-back":SH.mode="chain";renderSheet();break;
+  case "sub":SH.sub=null;SH.mode="sub";renderSheet();break;
+  case "sub-pick":{const s=subState(),g=b.dataset.g,i=+b.dataset.i;if(g==="size")s.size=i;else if(g==="sauce"){s.sauce=s.sauce.includes(i)?s.sauce.filter(x=>x!==i):[...s.sauce,i]}else s[g]=i;renderSheet();break}
+  case "sub-add":{const f=subFood(),k=cur,meal=SH.meal,e=addEntry(f,{g:f.portion.g,unit:"portion"},meal,k);openMeals.add(meal);closeSheet();render();haptic(10);
+    toast(`✓ ${f.name.split(" (")[0]} hinzugefügt`,{label:"Rückgängig",fn:()=>{removeEntry(k,e.id);render()}});break}
   case "qadd":{const f=pickMap.get(b.dataset.key);if(!f)return;const u=usual(f);
     if(SH.target==="recipe"){SH.recipe.items.push({food:slim(f),g:Math.round(u.g*10)/10});pushRecent(slim(f));save();SH.mode="recipe";SH.query="";renderSheet();toast("Zutat hinzugefügt");break}
     const k=cur,meal=SH.meal,en=addEntry(f,u,meal,k);openMeals.add(meal);haptic(10);b.classList.add("on");b.textContent="✓";b.disabled=true;render();
     toast(`✓ ${f.name} hinzugefügt`,{label:"Rückgängig",fn:()=>{removeEntry(k,en.id);render();if(b.isConnected){b.classList.remove("on");b.textContent="+";b.disabled=false}}});break}
   case "off-retry":scheduleOff(true);renderResults();break;
-  case "pick":{const f=pickMap.get(b.dataset.key);if(!f)return;SH.food=f;const hasP=f.portion&&f.portion.g;SH.unit=hasP?"portion":"g";SH.g=hasP?f.portion.g:100;SH.mode="detail";renderSheet();setTimeout(()=>{const i=$("#amt");i&&i.select()},30);break}
+  case "pick":{const f=pickMap.get(b.dataset.key);if(!f)return;SH.ret=SH.mode==="chain"?"chain":null;SH.food=f;const hasP=f.portion&&f.portion.g;SH.unit=hasP?"portion":"g";SH.g=hasP?f.portion.g:100;SH.mode="detail";renderSheet();setTimeout(()=>{const i=$("#amt");i&&i.select()},30);break}
   case "tpl-add":{const t=tplById(b.dataset.id);if(!t)return;const k=cur,meal=SH.meal,ids=addTpl(t,meal,k);openMeals.add(meal);haptic(10);b.classList.add("on");b.textContent="✓";b.disabled=true;render();
     toast(`✓ ${t.name} hinzugefügt`,{label:"Rückgängig",fn:()=>{removeIds(k,ids);render();if(b.isConnected){b.classList.remove("on");b.textContent="+";b.disabled=false}}});break}
   case "tpl-open":{const t=tplById(b.dataset.id);if(!t)return;SH.tpl=clone(t);SH.mode="tpl";renderSheet();break}
@@ -1808,7 +1952,8 @@ sheet.addEventListener("click",e=>{
     if($("#tpl-keep")&&$("#tpl-keep").checked){const real=tplById(t.id);if(real){real.items=clone(t.items.filter(it=>it.g>0))}}
     const k=cur,meal=SH.meal,ids=addTpl(t,meal,k);openMeals.add(meal);closeSheet();render();haptic(10);
     toast(`✓ ${t.name} hinzugefügt`,{label:"Rückgängig",fn:()=>{removeIds(k,ids);render()}});break}
-  case "back":if(["detail","quick","custom","scan","scan-result","tpl"].includes(SH.mode)){stopScan();SH.mode="search";renderSheet();focusFirst()}break;
+  case "back":if(SH.mode==="detail"&&SH.ret==="chain"){SH.ret=null;SH.mode="chain";renderSheet();break}
+    if(["detail","quick","custom","scan","scan-result","tpl","resto"].includes(SH.mode)){stopScan();SH.mode="search";renderSheet();focusFirst()}break;
   case "to-recipe":SH.mode="recipe";SH.target="meal";SH.query="";renderSheet();break;
   case "custom":SH.mode="custom";SH.editId=null;renderSheet();focusFirst();break;
   case "quick":SH.mode="quick";SH.quickVals=null;renderSheet();focusFirst();break;
@@ -1913,7 +2058,7 @@ async function accessStart(){
   let linkCode="";const m=(location.hash||"").match(/code=([A-Za-z0-9-]{6,40})/)||(location.search||"").match(/code=([A-Za-z0-9-]{6,40})/);
   if(m){linkCode=decodeURIComponent(m[1]);clearHash();try{history.replaceState(null,"",location.pathname)}catch(e){}}
   if(!CONFIG.access||(S.access&&S.access.ok)){startModals();setTimeout(accessRecheck,1500);return}
-  let st=null;try{st=await accessCall("status","",5000)}catch(e){}
+  let st=null;if(navigator.onLine!==false){try{st=await accessCall("status","",4000)}catch(e){}}
   if(!st||!st.enabled){ /* Sperre aus oder Server nicht erreichbar → App ganz normal öffnen */
     startModals();
     if(st&&linkCode){try{const j=await accessCall("activate",linkCode);if(j.ok)accessGranted(j,linkCode)}catch(e){}}
