@@ -456,6 +456,21 @@ body.locked .app{filter:blur(8px);pointer-events:none;user-select:none}
 .sheet-body{min-height:0}
 .sheet{max-height:min(90vh,820px)}
 @media (max-width:560px){.sheet{max-height:calc(92vh - env(safe-area-inset-bottom,0px))}}
+.cp-grid{display:grid;gap:14px;text-align:left;margin:6px 0 14px}
+.cp-grid .pills{flex-wrap:wrap;gap:8px}
+.cp-grid .mpill[aria-pressed="true"],.cp-grid .mpill.on{background:var(--accent,#b57bff);color:#120a1f;box-shadow:none}
+.cp-date{max-width:170px}
+.cp-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sheet-confirm{position:absolute;inset:0;z-index:5;display:grid;place-items:end center;background:rgba(5,8,13,.72);backdrop-filter:blur(2px);border-radius:inherit;padding:16px}
+.sheet-confirm .card{width:100%;max-width:440px;padding:18px;display:grid;gap:10px;text-align:center}
+.sheet-confirm h3{margin:0;font-size:18px}.sheet-confirm p{margin:0;color:var(--ink-2)}
+.sheet-confirm .cp-btns{margin-top:4px}
+.sheet{position:relative}
+/* „Powered by Netlify“-Hinweis: oben rechts in die Kopfzeile statt über die Navigation */
+#nl-badge-frame{top:calc(env(safe-area-inset-top,0px) + 8px)!important;bottom:auto!important;right:6px!important;left:auto!important;transform:scale(.72);transform-origin:top right}
+.has-nl .top{padding-right:150px}
+.has-nl .top:has(.top-pill:not(:empty)) #brand-sub{display:none}
+.has-nl #toast:not(.in-sheet){top:calc(66px + env(safe-area-inset-top,0px))}
 #toast.in-sheet{position:absolute;top:auto;bottom:88px;transform:translateX(-50%) translateY(16px)}
 #toast.in-sheet.show{transform:translateX(-50%)}
 #toast span{min-width:0}
@@ -887,7 +902,7 @@ function mealSection(m,list){
   const head=list.length?`<button class="mrow" data-action="meal-toggle" data-meal="${m.id}" aria-expanded="${open}"><span class="ico" aria-hidden="true">${m.emo}</span>${txt}<span class="chev" aria-hidden="true"></span></button>`
     :`<button class="mrow" data-action="add" data-meal="${m.id}"><span class="ico" aria-hidden="true">${m.emo}</span>${txt}<span></span></button>`;
   const acts=`<span class="m-acts">${!list.length&&y.length?`<button class="chip-btn" data-action="copy-meal" data-meal="${m.id}" title="Einträge von gestern übernehmen">🔁 Wie gestern</button>`:""}<button class="add-c" data-action="add" data-meal="${m.id}" aria-label="Zu ${m.label} hinzufügen">+</button></span>`;
-  return `<div class="meal-row ${open?"open":""}" id="meal-${m.id}"><div class="mrow-head">${head}${acts}</div>${open?`<ul class="entries">${items}</ul><div class="meal-foot"><button class="chip-btn" data-action="scan" data-meal="${m.id}">📷 Scannen</button><button class="chip-btn" data-action="add" data-meal="${m.id}">＋ Mehr hinzufügen</button>${list.length>1?`<button class="chip-btn" data-action="tpl-new" data-meal="${m.id}">⭐ Als Mahlzeit merken</button>`:""}</div>`:""}</div>`;
+  return `<div class="meal-row ${open?"open":""}" id="meal-${m.id}"><div class="mrow-head">${head}${acts}</div>${open?`<ul class="entries">${items}</ul><div class="meal-foot"><button class="chip-btn" data-action="scan" data-meal="${m.id}">📷 Scannen</button><button class="chip-btn" data-action="add" data-meal="${m.id}">＋ Mehr hinzufügen</button><button class="chip-btn" data-action="cp-open" data-meal="${m.id}">📋 Kopieren nach …</button>${list.length>1?`<button class="chip-btn" data-action="tpl-new" data-meal="${m.id}">⭐ Als Mahlzeit merken</button>`:""}</div>`:""}</div>`;
 }
 
 /* ---------- Gemerkte Mahlzeiten (z. B. „Mein Abendbrot“): mehrere Lebensmittel mit einem Tipp ---------- */
@@ -901,6 +916,33 @@ function removeIds(k,ids){const d=getDay(k,true),s=new Set(ids);d.entries=d.entr
 function tplsSorted(){return (S.mealTpls||[]).slice().sort((a,b)=>(b.used||0)-(a.used||0))}
 function tplUnit(it){return it.quick?"×":it.unit==="portion"&&it.food.portion?esc(it.food.portion.label.replace(/^1\s+/,"")):"g"}
 function tplShown(it){return it.quick?it.g/100:it.unit==="portion"&&it.food.portion?it.g/it.food.portion.g:it.g}
+/* Mahlzeit in einen anderen Tag / ein anderes Zeitfenster kopieren oder verschieben */
+let CP=null;
+function cpModal(){const c=CP,t=todayKey(),src=getDay(c.from,false).entries.filter(e=>e.meal===c.meal),kc=src.reduce((s,e)=>s+entryN(e).kcal,0);
+  const days=[[addDays(t,-1),"Gestern"],[t,"Heute"],[addDays(t,1),"Morgen"]];const other=!days.some(d=>d[0]===c.day);
+  const same=c.day===c.from&&c.to===c.meal;
+  modal(`<h3>📋 ${esc(mealLabel(c.meal))} kopieren</h3><p>${src.length} ${src.length===1?"Eintrag":"Einträge"} · ${fmt(kc)} kcal · von ${esc(dayTitle(c.from))}</p>
+    <div class="cp-grid">
+      <div><span class="label">Tag</span><div class="pills">${days.map(([k,l])=>`<button class="mpill" data-action="cp-day" data-k="${k}" aria-pressed="${c.day===k}">${l}</button>`).join("")}
+        <input class="input cp-date ${other?"on":""}" type="date" id="cp-date" value="${c.day}" aria-label="Anderes Datum"></div></div>
+      <div><span class="label">Mahlzeit</span><div class="pills">${MEALS.map(x=>`<button class="mpill" data-action="cp-meal" data-m="${x.id}" aria-pressed="${c.to===x.id}">${x.emo} ${x.label.replace("essen","")}</button>`).join("")}</div></div>
+    </div>
+    ${same?`<p class="muted small" style="margin:0 0 10px">Wähle einen anderen Tag oder eine andere Mahlzeit.</p>`:""}
+    <div class="cp-btns"><button class="btn" data-action="cp-go" data-mv="1" ${same?"disabled":""}>Verschieben</button><button class="btn primary" data-action="cp-go" ${same?"disabled":""}>Kopieren</button></div>
+    <button class="text-btn" data-action="cal-cancel">Abbrechen</button>`,true)}
+function cpOpen(mealId){const t=todayKey(),idx=MEALS.findIndex(m=>m.id===mealId);
+  /* Vorschlag: von einem anderen Tag → heute, gleiche Mahlzeit; von heute → nächste Mahlzeit heute */
+  CP=cur!==t?{from:cur,meal:mealId,day:t,to:mealId}:{from:cur,meal:mealId,day:t,to:MEALS[Math.min(MEALS.length-1,idx+1)].id};
+  if(CP.day===CP.from&&CP.to===CP.meal)CP.to=MEALS[0].id;cpModal()}
+function cpGo(move){const c=CP;if(!c)return;const src=getDay(c.from,false).entries.filter(e=>e.meal===c.meal);if(!src.length){closeModal();return}
+  const d=getDay(c.day,true),ids=[],moved=src.map(e=>e.id),wasMeal=c.meal,wasFrom=c.from;
+  if(move){src.forEach(e=>{e.meal=c.to;if(c.day!==c.from){const fd=getDay(c.from,true);fd.entries=fd.entries.filter(x=>x.id!==e.id);d.entries.push(e)}ids.push(e.id)})}
+  else src.forEach(e=>{const n=Object.assign(clone(e),{id:uid(),meal:c.to});d.entries.push(n);ids.push(n.id)});
+  openMeals.add(c.to);save();closeModal();CP=null;render();haptic(10);
+  const where=`${mealLabel(c.to)} · ${dayTitle(c.day)}`;
+  toast(`✓ ${move?"Verschoben":"Kopiert"} → ${where}`,{label:"Rückgängig",fn:()=>{
+    if(move){const dd=getDay(c.day,true),mv=dd.entries.filter(x=>moved.includes(x.id));mv.forEach(x=>x.meal=wasMeal);if(c.day!==wasFrom){dd.entries=dd.entries.filter(x=>!moved.includes(x.id));getDay(wasFrom,true).entries.push(...mv)}save()}
+    else removeIds(c.day,ids);render()}})}
 function tplSaveModal(mealId){
   const list=getDay(cur,false).entries.filter(e=>e.meal===mealId);if(!list.length)return;
   const m=MEALS.find(x=>x.id===mealId),def=mealId==="abend"?"Mein Abendbrot":"Mein "+m.label;
@@ -1745,6 +1787,10 @@ document.addEventListener("click",async e=>{
     case "export-copy":{const txt=JSON.stringify(S);const ok=await copyText(txt,"Backup in die Zwischenablage kopiert");if(!ok){const t=$("#imp-text");t.value=txt;t.select()}else{S.lastBackup=Date.now();save()}break}
     case "export-file":exportFile();break;
     case "tpl-new":tplSaveModal(b.dataset.meal);break;
+    case "cp-open":cpOpen(b.dataset.meal);break;
+    case "cp-day":if(CP){CP.day=b.dataset.k;cpModal()}break;
+    case "cp-meal":if(CP){CP.to=b.dataset.m;cpModal()}break;
+    case "cp-go":cpGo(!!b.dataset.mv);break;
     case "tpl-save":tplSave(b.dataset.meal);break;
     case "tpl-del":{const i=(S.mealTpls||[]).findIndex(t=>t.id===b.dataset.id);if(i<0)break;const [t]=S.mealTpls.splice(i,1);save();render();
       toast(`„${t.name}“ gelöscht`,{label:"Rückgängig",fn:()=>{S.mealTpls.splice(i,0,t);save();render()}});break}
@@ -1786,6 +1832,7 @@ document.addEventListener("change",e=>{
   if(e.target.id==="split"){S.splitOn=e.target.checked;if(S.splitOn&&!S.restGoals){const sp=splitFrom(S.goals);S.goals={...sp.train,water:S.goals.water};S.restGoals=sp.rest}
     else if(!S.splitOn&&S.restGoals){/* Wochenschnitt als einheitliches Ziel */const t=S.trainDays.length,r=S.restGoals,g=S.goals;const avg=k=>Math.round((g[k]*t+r[k]*(7-t))/7);S.goals={kcal:avg("kcal"),p:avg("p"),c:avg("c"),f:avg("f"),water:g.water};S.restGoals=null}
     save();render();toast(S.splitOn?"Trainings- und Ruhetag-Ziele aktiv":"Einheitliches Tagesziel aktiv")}
+  if(e.target.id==="cp-date"&&CP&&e.target.value){CP.day=e.target.value;cpModal();return}
   if(e.target.id==="imp-file"){const file=e.target.files[0];if(!file)return;const fr=new FileReader();fr.onload=()=>importData(String(fr.result));fr.readAsText(file)}
 });
 async function exportFile(){
@@ -1802,15 +1849,25 @@ function importData(txt){
 /* ---------- Dialog: Hinzufügen, Menge, Schnelleintrag, eigenes Lebensmittel, Rezept ---------- */
 const sheet=$("#sheet"),SB=$("#sb");let SH=null,offCtl=null,offTimer=null,offState={q:"",status:"",items:[]};const offCache=new Map();const pickMap=new Map();
 function openSheet(st){loadBLS();SH=Object.assign({query:"",target:"meal",unit:"g"},st);renderSheet();if(!sheet.open)sheet.showModal();focusFirst()}
-function focusFirst(){setTimeout(()=>{const el=SH&&({search:"#q",quick:"#q-kcal",custom:"#c-name",recipe:"#r-name"})[SH.mode];if(el&&$(el))$(el).focus()},30)}
+function focusFirst(){setTimeout(()=>{const el=SH&&({search:"#q",quick:"#q-kcal",custom:"#c-name",recipe:SH.recipe&&!SH.recipe.items.length&&!SH.recipe.name?"#r-name":null})[SH.mode];if(el&&$(el))$(el).focus()},30)}
+function recipeDirty(){if(!SH||!SH.recipe)return false;if(SH.recipe0==null)return !!(SH.recipe.items.length||(SH.recipe.name||"").trim());return JSON.stringify(SH.recipe)!==SH.recipe0}
+/* Alle Wege zum Schließen (✕, Abbrechen, Tippen daneben, Wischen, Esc) laufen hierüber */
+function requestClose(){if(!SH){closeSheet();return}
+  /* Im Zutaten-Teil führt ✕ zurück zum Rezept statt alles zu schließen */
+  if(SH.target==="recipe"&&SH.mode!=="recipe"){stopScan();SH.mode="recipe";SH.query="";renderSheet();return}
+  if(SH.mode==="recipe"&&recipeDirty()){const box=sheet.querySelector(".sheet");if(!box||box.querySelector(".sheet-confirm"))return;const n=SH.recipe.items.length;
+    box.insertAdjacentHTML("beforeend",`<div class="sheet-confirm" role="alertdialog" aria-label="Rezept verwerfen?"><div class="card"><h3>Rezept verwerfen?</h3><p>${SH.editId?"Deine Änderungen gehen verloren.":n?`Deine ${n} ${n===1?"Zutat geht":"Zutaten gehen"} verloren.`:"Deine Eingaben gehen verloren."}</p><div class="cp-btns"><button class="btn danger" data-sh="discard-yes">Verwerfen</button><button class="btn primary" data-sh="discard-no">Weiter bearbeiten</button></div></div></div>`);
+    const k=box.querySelector('[data-sh="discard-no"]');if(k)k.focus();const tt=$("#toast");if(tt)tt.classList.remove("show");return}
+  closeSheet();if(tab==="ziele")render()}
+sheet.addEventListener("cancel",e=>{if(SH&&(SH.target==="recipe"||SH.mode==="recipe")){e.preventDefault();requestClose()}});
 function closeSheet(){stopScan();if(offCtl)offCtl.abort();clearTimeout(offTimer);sheet.close();SH=null}
 sheet.addEventListener("close",()=>{stopScan();SH=null;const t=$("#toast");if(t.parentNode===sheet){document.body.appendChild(t);t.classList.remove("in-sheet")}});
-sheet.addEventListener("click",e=>{if(e.target===sheet)closeSheet()});
+sheet.addEventListener("click",e=>{if(e.target===sheet)requestClose()});
 /* Nach unten wischen schließt das Fenster (Handy) */
 (function(){let y0=null,dy=0;
   sheet.addEventListener("touchstart",e=>{if(!e.target.closest(".grab,.sheet-head"))return;y0=e.touches[0].clientY;dy=0;sheet.style.transition="none"},{passive:true});
   sheet.addEventListener("touchmove",e=>{if(y0==null)return;dy=Math.max(0,e.touches[0].clientY-y0);sheet.style.transform=`translateY(${dy}px)`},{passive:true});
-  sheet.addEventListener("touchend",()=>{if(y0==null)return;sheet.style.transition="";sheet.style.transform="";if(dy>90)closeSheet();y0=null})})();
+  sheet.addEventListener("touchend",()=>{if(y0==null)return;sheet.style.transition="";sheet.style.transform="";if(dy>90)requestClose();y0=null})})();
 const mealLabel=id=>(MEALS.find(m=>m.id===id)||{label:""}).label;
 const head=(title,extra="",eyebrow="")=>`<span class="grab" aria-hidden="true"></span><div class="sheet-head"><div style="min-width:0">${eyebrow?`<span class="eyebrow">${esc(eyebrow)}</span>`:""}<h2>${title}</h2></div><span class="inline-form" style="flex-wrap:nowrap">${extra}<button class="icon-btn x" data-sh="close" aria-label="Schließen">✕</button></span></div>`;
 const starSvg=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8Z" fill="none" stroke="var(--muted)" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
@@ -1828,7 +1885,7 @@ function renderSheet(){
       ${rec?"":`<div class="pills" role="group" aria-label="Mahlzeit">${MEALS.map(x=>`<button class="mpill" data-sh="meal" data-m="${x.id}" aria-pressed="${x.id===SH.meal}">${x.emo} ${x.label.replace("essen","")}</button>`).join("")}</div>`}
       <div class="searchrow"><div class="sfield">${ICON_SEARCH}<input class="input" id="q" type="search" placeholder="Lebensmittel, Marke oder Barcode" autocomplete="off" value="${esc(SH.query)}" aria-label="Lebensmittel suchen"></div><button class="scan-btn" data-sh="scan" aria-label="Barcode scannen">${ICON_SCAN}<span>Scan</span></button></div>
       <div class="results" id="results"></div></div>
-    ${rec?`<div class="sheet-foot"><button class="btn ghost" data-sh="to-recipe">Zurück zum Rezept</button></div>`:""}</div>`;
+    ${rec?`<div class="sheet-foot"><span class="muted small">Tippe auf + für die übliche Menge</span><span class="spacer"></span><button class="btn primary" data-sh="to-recipe">${SH.recipe.items.length?`Fertig · zum Rezept (${SH.recipe.items.length})`:"Zurück zum Rezept"}</button></div>`:""}</div>`;
     renderResults();
   } else if(m==="detail"){
     const f=SH.food,hasP=!!(f.portion&&f.portion.g),pu=SH.unit==="portion"&&hasP;
@@ -1845,7 +1902,7 @@ function renderSheet(){
       ${SH.target==="meal"?`<p class="group-title" style="margin:4px 4px -4px"><span>So verändert sich dein Tag</span></p><div class="card impact" id="after"></div>`:""}
       ${SH.target==="meal"&&SH.entryId?`<div class="field"><span class="label">Mahlzeit</span><div class="pills" style="margin:0 -16px">${MEALS.map(x=>`<button class="mpill" data-sh="meal" data-m="${x.id}" aria-pressed="${x.id===SH.meal}">${x.emo} ${x.label.replace("essen","")}</button>`).join("")}</div></div>`:""}
     </div>
-    <div class="sheet-foot">${SH.entryId?`<button class="btn danger" data-sh="delete">Löschen</button>`:`<button class="btn ghost" data-sh="back">Zurück</button>`}<button class="btn primary" data-sh="confirm" id="confirm-btn">Hinzufügen</button></div></div>`;
+    <div class="sheet-foot">${SH.target==="recipe"?`<button class="btn" data-sh="confirm-next">＋ Weitere Zutat</button>`:SH.entryId?`<button class="btn danger" data-sh="delete">Löschen</button>`:`<button class="btn ghost" data-sh="back">Zurück</button>`}<button class="btn primary" data-sh="confirm" id="confirm-btn">Hinzufügen</button></div></div>`;
     updatePreview();
   } else if(m==="resto"||m==="chain"||m==="sub"){renderResto();
   } else if(m==="tpl"){
@@ -1909,7 +1966,7 @@ function renderSheet(){
     </div>
     <div class="sheet-foot">${SH.meal||SH.target==="recipe"?`<button class="btn ghost" data-sh="back">Zurück</button>`:""}<span class="spacer"></span><button class="btn primary" data-sh="custom-save">${SH.meal||SH.target==="recipe"?"Speichern & weiter":"Speichern"}</button></div></div>`;
   } else if(m==="recipe"){
-    const rc=SH.recipe;
+    const rc=SH.recipe;if(SH.recipe0==null&&SH.editId)SH.recipe0=JSON.stringify(rc);
     SB.innerHTML=`<div class="sheet">${head(SH.editId?"Rezept bearbeiten":"Rezept erstellen")}
     <div class="sheet-body">
       <div class="field"><label class="label" for="r-name">Name</label><input class="input" id="r-name" value="${esc(rc.name)}" placeholder="z. B. Chili con Carne (Meal-Prep)"></div>
@@ -2082,10 +2139,11 @@ function updatePreview(){const pv=$("#pv");if(!pv)return;const n=nutr(SH.food,SH
 function setShown(v){v=Math.max(0,Math.round(v*100)/100);const pu=SH.unit==="portion"&&SH.food.portion;SH.g=pu?v*SH.food.portion.g:v;const i=$("#amt");if(i)i.value=fmtAmt(v);updatePreview()}
 function shownVal(){const pu=SH.unit==="portion"&&SH.food.portion;return pu?SH.g/SH.food.portion.g:SH.g}
 function pushRecent(food){S.recent=[food,...S.recent.filter(f=>!sameFood(f,food))].slice(0,30)}
-function confirmEntry(){
+function confirmEntry(next){
   if(!(SH.g>0)){toast("Bitte eine Menge eingeben");return}
   const food=slim(SH.food),g=Math.round(SH.g*10)/10;
-  if(SH.target==="recipe"){SH.recipe.items.push({food,g});pushRecent(food);save();SH.mode="recipe";SH.query="";renderSheet();focusFirst();return}
+  if(SH.target==="recipe"){SH.recipe.items.push({food,g});pushRecent(food);save();SH.query="";
+    if(next){SH.mode="search";renderSheet();focusFirst();toast(`✓ ${food.name} im Rezept · jetzt die nächste Zutat`)}else{SH.mode="recipe";renderSheet()}return}
   const d=getDay(cur,true);let newId=null;
   if(SH.entryId){const e=d.entries.find(x=>x.id===SH.entryId);if(e){e.g=g;e.meal=SH.meal;e.unit=SH.unit}}
   else{newId=uid();d.entries.push({id:newId,meal:SH.meal,food,g,unit:SH.unit})}
@@ -2121,7 +2179,7 @@ function saveRecipe(){
 sheet.addEventListener("click",e=>{
   const b=e.target.closest("[data-sh]");if(!b)return;const a=b.dataset.sh;
   switch(a){
-  case "close":closeSheet();if(tab==="ziele")render();break;
+  case "close":requestClose();break;
   case "scan":SH.mode="scan";SH.scanRes=null;renderSheet();break;
   case "scan-manual":{const c=($("#scan-code").value||"").replace(/\D/g,"");if(c.length<8){toast("Bitte die ganze Barcode-Nummer eingeben (8–14 Ziffern)");return}stopScan();onBarcode(c);break}
   case "custom-code":SH.pendingCode=SH.scanCode;SH.mode="custom";SH.editId=null;SH.query="";renderSheet();focusFirst();break;
@@ -2134,7 +2192,8 @@ sheet.addEventListener("click",e=>{
   case "sub-add":{const f=subFood(),k=cur,meal=SH.meal,e=addEntry(f,{g:f.portion.g,unit:"portion"},meal,k);openMeals.add(meal);closeSheet();render();haptic(10);
     toast(`✓ ${f.name.split(" (")[0]} hinzugefügt`,{label:"Rückgängig",fn:()=>{removeEntry(k,e.id);render()}});break}
   case "qadd":{const f=pickMap.get(b.dataset.key);if(!f)return;const u=usual(f);
-    if(SH.target==="recipe"){SH.recipe.items.push({food:slim(f),g:Math.round(u.g*10)/10});pushRecent(slim(f));save();SH.mode="recipe";SH.query="";renderSheet();toast("Zutat hinzugefügt");break}
+    if(SH.target==="recipe"){SH.recipe.items.push({food:slim(f),g:Math.round(u.g*10)/10});pushRecent(slim(f));save();b.classList.add("on");b.textContent="✓";b.disabled=true;
+      const ft=sheet.querySelector('[data-sh="to-recipe"]');if(ft)ft.textContent=`Fertig · zum Rezept (${SH.recipe.items.length})`;toast(`✓ ${f.name} im Rezept`);break}
     const k=cur,meal=SH.meal,en=addEntry(f,u,meal,k);openMeals.add(meal);haptic(10);b.classList.add("on");b.textContent="✓";b.disabled=true;render();
     toast(`✓ ${f.name} hinzugefügt`,{label:"Rückgängig",fn:()=>{removeEntry(k,en.id);render();if(b.isConnected){b.classList.remove("on");b.textContent="+";b.disabled=false}}});break}
   case "off-retry":scheduleOff(true);renderResults();break;
@@ -2149,12 +2208,14 @@ sheet.addEventListener("click",e=>{
   case "back":if(SH.mode==="detail"&&SH.ret==="chain"){SH.ret=null;SH.mode="chain";renderSheet();break}
     if(["detail","quick","custom","scan","scan-result","tpl","resto"].includes(SH.mode)){stopScan();SH.mode="search";renderSheet();focusFirst()}break;
   case "to-recipe":SH.mode="recipe";SH.target="meal";SH.query="";renderSheet();break;
+  case "discard-no":{const o=sheet.querySelector(".sheet-confirm");if(o)o.remove();break}
+  case "discard-yes":SH.recipe0=null;SH.recipe=null;closeSheet();if(tab==="ziele")render();break;
   case "custom":SH.mode="custom";SH.editId=null;renderSheet();focusFirst();break;
   case "quick":SH.mode="quick";SH.quickVals=null;renderSheet();focusFirst();break;
-  case "recipe-new":SH.mode="recipe";SH.recipe={name:"",items:[],total:"",portions:4};SH.editId=null;renderSheet();focusFirst();break;
+  case "recipe-new":SH.mode="recipe";SH.recipe={name:"",items:[],total:"",portions:4};SH.recipe0=null;SH.editId=null;renderSheet();focusFirst();break;
   case "r-add":SH.mode="search";SH.target="recipe";SH.query="";renderSheet();focusFirst();break;
   case "r-del":SH.recipe.items.splice(+b.dataset.i,1);renderSheet();break;
-  case "recipe-save":{const food=saveRecipe();if(!food)return;
+  case "recipe-save":{const food=saveRecipe();if(!food)return;SH.recipe0=JSON.stringify(SH.recipe);
     if(SH.meal){SH.editId=null;SH.target="meal";SH.food=food;SH.unit="portion";SH.g=food.portion.g;SH.mode="detail";renderSheet();toast("Rezept gespeichert")}
     else{closeSheet();render();toast("Rezept gespeichert")}break}
   case "custom-save":{const food=saveCustomFood();if(!food)return;
@@ -2171,6 +2232,7 @@ sheet.addEventListener("click",e=>{
   case "meal":SH.meal=b.dataset.m;sheet.querySelectorAll('[data-sh="meal"]').forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.m===SH.meal)));{const eb=sheet.querySelector(".sheet-head .eyebrow");if(eb&&!SH.entryId&&SH.target==="meal")eb.textContent="Zu "+mealLabel(SH.meal)}break;
   case "fav":{const f=slim(SH.food);if(isFav(f)){S.favs=S.favs.filter(x=>!sameFood(x,f));toast("Aus Favoriten entfernt")}else{S.favs.unshift(f);toast("Zu Favoriten hinzugefügt")}save();b.setAttribute("aria-pressed",String(isFav(f)));break}
   case "confirm":confirmEntry();break;
+  case "confirm-next":confirmEntry(true);break;
   case "delete":{const id=SH.entryId;closeSheet();deleteEntry(cur,id);break}
   }
 });
@@ -2179,6 +2241,9 @@ sheet.addEventListener("click",e=>{
 let lastToday=todayKey();setInterval(()=>{const t=todayKey();if(t!==lastToday){if(cur===lastToday)cur=t;lastToday=t;if(!sheet.open)render()}},60000);
 
 renderBanner();render();
+/* Netlify blendet auf dem Gratis-Tarif einen Hinweis ein – Platz dafür in der Kopfzeile reservieren */
+(function(){const chk=()=>{const on=!!document.getElementById("nl-badge-frame");document.body.classList.toggle("has-nl",on);return on};
+  if(!chk()){const mo=new MutationObserver(()=>{if(chk())mo.disconnect()});mo.observe(document.body,{childList:true});setTimeout(()=>mo.disconnect(),20000)}})();
 function startModals(){
   const logo=CONFIG.logo?`<img class="m-logo" src="${CONFIG.logo}" alt="">`:"";
   if(pendingCoach){const o=pendingCoach,pg=o.g,mt=o.m?String(o.m).slice(0,600):"";
